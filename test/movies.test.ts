@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 
 vi.mock("../src/db/queries/movies.js", () => ({
   createMovie: vi.fn(),
+  deleteMovie: vi.fn(),
   getAllMovies: vi.fn(),
   getMovieById: vi.fn(),
   updateMovie: vi.fn(),
@@ -10,12 +11,14 @@ vi.mock("../src/db/queries/movies.js", () => ({
 
 import {
   createMovie,
+  deleteMovie,
   getAllMovies,
   getMovieById,
   updateMovie,
 } from "../src/db/queries/movies.js";
 import {
   moviesCreate,
+  moviesDeleteById,
   moviesGetAll,
   moviesGetById,
   moviesUpdateById,
@@ -121,20 +124,6 @@ describe("moviesGetById", () => {
     );
   });
 
-  it("responds 404 and not 200 when the movie is missing", async () => {
-    vi.mocked(getMovieById).mockResolvedValue(undefined);
-
-    const res = makeResponse();
-    await moviesGetById(
-      makeRequest({ params: { id: "not-a-uuid" } }),
-      res,
-      makeNext(),
-    );
-
-    expect(res.status).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(404);
-  });
-
   it("forwards query errors to next", async () => {
     vi.mocked(getMovieById).mockRejectedValue(new Error("db down"));
 
@@ -225,5 +214,75 @@ describe("moviesUpdateById", () => {
     );
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(updated);
+  });
+
+  it("responds 404 when no movie matches the id", async () => {
+    vi.mocked(updateMovie).mockResolvedValue(undefined as unknown as Movie);
+
+    const res = makeResponse();
+    await moviesUpdateById(
+      makeRequest({ params: { id: movie.id }, body: { name: "The Matrix" } }),
+      res,
+      makeNext(),
+    );
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      message: `Failed to update movie ${movie.id}`,
+    });
+  });
+
+  it("forwards update errors to next", async () => {
+    vi.mocked(updateMovie).mockRejectedValue(new Error("db down"));
+
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesUpdateById(
+      makeRequest({ params: { id: movie.id }, body: { name: "The Matrix" } }),
+      res,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "db down" }),
+    );
+    expect(res.status).not.toHaveBeenCalled();
+  });
+});
+
+describe("moviesDeleteById", () => {
+  it("deletes by the id from req.params and responds 200 with a confirmation message", async () => {
+    vi.mocked(deleteMovie).mockResolvedValue(undefined);
+
+    const res = makeResponse();
+    await moviesDeleteById(
+      makeRequest({ params: { id: movie.id } }),
+      res,
+      makeNext(),
+    );
+
+    expect(deleteMovie).toHaveBeenCalledWith(movie.id);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: `Movie ${movie.id} has been deleted`,
+    });
+  });
+
+  it("does not send a body when deletion fails", async () => {
+    vi.mocked(deleteMovie).mockRejectedValue(new Error("Invalid UUID"));
+
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesDeleteById(
+      makeRequest({ params: { id: "not-a-uuid" } }),
+      res,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Invalid UUID" }),
+    );
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 });

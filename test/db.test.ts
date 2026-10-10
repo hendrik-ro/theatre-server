@@ -86,28 +86,6 @@ describe("getMovieById", () => {
   });
 });
 
-describe("firstOrUndefined", () => {
-  it("returns undefined for an empty array", () => {
-    expect(firstOrUndefined([])).toBeUndefined();
-  });
-
-  it("returns the first element without touching the rest", () => {
-    expect(firstOrUndefined([1, 2, 3])).toBe(1);
-  });
-});
-
-describe("resetMovies", () => {
-  it("resets the movie table", async () => {
-    await createMovie("Inception", 2010);
-    await createMovie("Sicario", 2015);
-    const movies = await getAllMovies();
-    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
-
-    await resetMovies();
-    expect(await getAllMovies()).toEqual([]);
-  });
-});
-
 describe("deleteMovie", () => {
   it("deletes a movie by UUID", async () => {
     const created = await createMovie("Inception", 2010);
@@ -153,7 +131,6 @@ describe("updateMovie", () => {
 
     expect(updatedMovie).toMatchObject({
       createdAt: movie.createdAt,
-      updatedAt: updatedMovie.updatedAt,
       id: movie.id,
       name: "Inception",
       year: 2011,
@@ -161,5 +138,46 @@ describe("updateMovie", () => {
       imdbRating: 8.7,
       genre: "sci-fi",
     });
+    expect(updatedMovie.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      movie.updatedAt.getTime(),
+    );
+  });
+
+  it("returns undefined when no movie matches the id", async () => {
+    const movie = await createMovie("Inception", 2010);
+
+    const updated = await updateMovie(
+      "00000000-0000-0000-0000-000000000000",
+      "Nope",
+      2020,
+      100,
+      5,
+      "drama",
+    );
+
+    expect(updated).toBeUndefined();
+    expect((await getMovieById(movie.id))?.name).toBe("Inception");
+  });
+});
+
+describe("resetMovies", () => {
+  it("resets the movie table", async () => {
+    await createMovie("Inception", 2010);
+    await createMovie("Sicario", 2015);
+    const movies = await getAllMovies();
+    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
+
+    await resetMovies();
+    expect(await getAllMovies()).toEqual([]);
+  });
+});
+
+describe("firstOrUndefined", () => {
+  it("returns undefined for an empty array", () => {
+    expect(firstOrUndefined([])).toBeUndefined();
+  });
+
+  it("returns the first element without touching the rest", () => {
+    expect(firstOrUndefined([1, 2, 3])).toBe(1);
   });
 });
