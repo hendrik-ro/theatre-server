@@ -1,11 +1,19 @@
 import express from "express";
+import router from "./routes/movies.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 const port = process.env.SERVER_PORT ?? 3000;
 
-app.get("/api/health", (_req, res) => {
+app.use(express.json());
+
+app.use("/movies", router);
+
+app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use(errorHandler);
 
 const server = app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);

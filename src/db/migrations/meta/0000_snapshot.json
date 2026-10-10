@@ -1,5 +1,5 @@
 {
-  "id": "92a1926b-af5e-4d98-b082-bd03912b464d",
+  "id": "11e51932-2a40-47aa-bbec-dbf9bbde8033",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -49,7 +49,7 @@
         },
         "imdb_rating": {
           "name": "imdb_rating",
-          "type": "integer",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },

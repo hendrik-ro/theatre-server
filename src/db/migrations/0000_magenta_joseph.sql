@@ -5,7 +5,7 @@ CREATE TABLE "movies" (
 	"name" text NOT NULL,
 	"year" integer,
 	"runtime" integer,
-	"imdb_rating" integer,
+	"imdb_rating" numeric,
 	"genre" text,
 	CONSTRAINT "movies_name_unique" UNIQUE("name")
 );

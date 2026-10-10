@@ -30,7 +30,7 @@ const conn = postgres(testUrl.href);
 await migrate(drizzle(conn), {
   migrationsFolder: path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../src/lib/db/migrations",
+    "../src/db/migrations",
   ),
 });
 await conn.end();

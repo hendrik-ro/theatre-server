@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
-import { db } from "../src/lib/db/index.js";
+import { db } from "../src/db/index.js";
 import {
   createMovie,
   deleteMovie,
   getAllMovies,
-  getMovieByName,
+  getMovieById,
   resetMovies,
-} from "../src/lib/db/queries/movies.js";
-import { firstOrUndefined } from "../src/lib/db/queries/utils.js";
+  updateMovie,
+} from "../src/db/queries/movies.js";
+import { firstOrUndefined } from "../src/db/queries/utils.js";
 
 beforeEach(async () => {
   await db.execute(sql`TRUNCATE TABLE movies`);
@@ -22,7 +23,7 @@ describe("createMovie", () => {
       name: "Inception",
       year: 2010,
       runtime: 148,
-      imdb_rating: 88,
+      imdbRating: 88,
       genre: "sci-fi",
     });
     expect(movie.id).toMatch(
@@ -39,7 +40,7 @@ describe("createMovie", () => {
       name: "Untitled",
       year: null,
       runtime: null,
-      imdb_rating: null,
+      imdbRating: null,
       genre: null,
     });
   });
@@ -73,15 +74,15 @@ describe("getAllMovies", () => {
   });
 });
 
-describe("getMovieByName", () => {
-  it("finds a movie by name", async () => {
+describe("getMovieById", () => {
+  it("finds a movie by id", async () => {
     const created = await createMovie("Inception", 2010);
 
-    expect(await getMovieByName("Inception")).toEqual(created);
+    expect(await getMovieById(created.id)).toEqual(created);
   });
 
-  it("returns undefined for an unknown name", async () => {
-    expect(await getMovieByName("Nope")).toBeUndefined();
+  it("returns undefined for an unknown id", async () => {
+    expect(await getMovieById("Nope")).toBeUndefined();
   });
 });
 
@@ -112,7 +113,7 @@ describe("deleteMovie", () => {
     const created = await createMovie("Inception", 2010);
     await deleteMovie(created.id);
 
-    expect(await getMovieByName("Inception")).toBeUndefined();
+    expect(await getMovieById(created.id)).toBeUndefined();
   });
 
   it("leaves other movies untouched", async () => {
@@ -134,14 +135,31 @@ describe("deleteMovie", () => {
   });
 
   it("rejects a malformed UUID", async () => {
-    const err = await deleteMovie("not-a-uuid").then(
-      () => null,
-      (e: unknown) => e,
+    await expect(deleteMovie("not-a-uuid")).rejects.toThrow("Invalid UUID");
+  });
+});
+
+describe("updateMovie", () => {
+  it("updates a movie and returns the updated row", async () => {
+    const movie = await createMovie("Inception", 2010);
+    const updatedMovie = await updateMovie(
+      movie.id,
+      movie.name,
+      2011,
+      132,
+      8.7,
+      "sci-fi",
     );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("22P02");
+
+    expect(updatedMovie).toMatchObject({
+      createdAt: movie.createdAt,
+      updatedAt: updatedMovie.updatedAt,
+      id: movie.id,
+      name: "Inception",
+      year: 2011,
+      runtime: 132,
+      imdbRating: 8.7,
+      genre: "sci-fi",
+    });
   });
 });

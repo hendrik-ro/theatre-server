@@ -1,4 +1,11 @@
-import { pgTable, timestamp, uuid, text, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  timestamp,
+  uuid,
+  text,
+  integer,
+  numeric,
+} from "drizzle-orm/pg-core";
 
 export const movies = pgTable("movies", {
   id: uuid("id").primaryKey().defaultRandom().notNull(),
@@ -10,6 +17,6 @@ export const movies = pgTable("movies", {
   name: text("name").notNull().unique(),
   year: integer("year"),
   runtime: integer("runtime"),
-  imdb_rating: integer("imdb_rating"),
+  imdbRating: numeric("imdb_rating", { mode: "number" }),
   genre: text("genre"),
 });
