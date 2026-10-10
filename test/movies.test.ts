@@ -158,7 +158,7 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imbd_rating: 8.7,
+      imbdRating: 8.7,
       genre: "sci-fi",
     };
     await moviesCreate(makeRequest({ body }), res, makeNext());

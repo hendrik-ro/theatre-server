@@ -26,12 +26,12 @@ export const moviesCreate = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, year, runtime, imbd_rating, genre } = req.body;
+    const { name, year, runtime, imbdRating, genre } = req.body;
     const newMovie: Movie = await createMovie(
       name,
       year,
       runtime,
-      imbd_rating,
+      imbdRating,
       genre,
     );
     res.status(201).json(newMovie);
