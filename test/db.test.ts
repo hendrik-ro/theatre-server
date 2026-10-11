@@ -261,8 +261,8 @@ describe("getMoviesMetaData", () => {
         { year: 2015, count: 1 },
       ],
       moviesPerGenre: [
-        { genre: null, count: 1 },
         { genre: "sci-fi", count: 1 },
+        { genre: null, count: 1 },
       ],
     });
   });

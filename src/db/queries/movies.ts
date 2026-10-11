@@ -85,7 +85,7 @@ export async function getMoviesMetaData(): Promise<MoviesMeta> {
     })
     .from(movies)
     .groupBy(movies.genre)
-    .orderBy(desc(count()));
+    .orderBy(desc(count()), asc(movies.genre));
   const meta: MoviesMeta = {
     totalMovies: totalMovies.count,
     moviesPerYear,
