@@ -11,5 +11,5 @@
     "composite": true,
     "declarationMap": true
   },
-  "include": ["src", "src/config.ts"]
+  "include": ["src"]
 }

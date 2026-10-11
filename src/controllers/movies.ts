@@ -4,9 +4,10 @@ import {
   deleteMovie,
   getAllMovies,
   getMovieById,
+  getMoviesMetaData,
   updateMovie,
 } from "../db/queries/movies.js";
-import { Movie } from "../models/movies.js";
+import { Movie, MoviesMeta, movieInputSchema } from "../models/movies.js";
 
 export const moviesGetAll = async (
   _: Request,
@@ -27,13 +28,13 @@ export const moviesCreate = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, year, runtime, imbdRating, genre } = req.body;
+    const input = movieInputSchema.parse(req.body);
     const newMovie: Movie = await createMovie(
-      name,
-      year,
-      runtime,
-      imbdRating,
-      genre,
+      input.name,
+      input.year,
+      input.runtime,
+      input.imdbRating,
+      input.genre,
     );
     res.status(201).json(newMovie);
   } catch (err) {
@@ -65,8 +66,15 @@ export const moviesUpdateById = async (
 ) => {
   try {
     const id = req.params.id;
-    const { name, year, runtime, imdbRating, genre } = req.body;
-    const movie = await updateMovie(id, name, year, runtime, imdbRating, genre);
+    const input = movieInputSchema.parse(req.body);
+    const movie = await updateMovie(
+      id,
+      input.name,
+      input.year,
+      input.runtime,
+      input.imdbRating,
+      input.genre,
+    );
     if (!movie) {
       return res.status(404).json({ message: `Failed to update movie ${id}` });
     }
@@ -85,6 +93,19 @@ export const moviesDeleteById = async (
     const id = req.params.id;
     await deleteMovie(id);
     res.status(200).json({ message: `Movie ${id} has been deleted` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const moviesMetaData = async (
+  _: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const meta: MoviesMeta = await getMoviesMetaData();
+    res.status(200).json(meta);
   } catch (err) {
     next(err);
   }

@@ -1,10 +1,13 @@
 import express from "express";
+import helmet from "helmet";
 import router from "./routes/movies.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { config } from "./config.js";
 
 const app = express();
-const port = process.env.SERVER_PORT ?? 3000;
+const port = config.serverPort;
 
+app.use(helmet());
 app.use(express.json());
 
 app.use("/api/movies", router);

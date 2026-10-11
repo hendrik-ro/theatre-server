@@ -6,6 +6,7 @@ import {
   deleteMovie,
   getAllMovies,
   getMovieById,
+  getMoviesMetaData,
   resetMovies,
   updateMovie,
 } from "../src/db/queries/movies.js";
@@ -17,13 +18,13 @@ beforeEach(async () => {
 
 describe("createMovie", () => {
   it("inserts a movie and returns the row with generated fields", async () => {
-    const movie = await createMovie("Inception", 2010, 148, 88, "sci-fi");
+    const movie = await createMovie("Inception", 2010, 148, 8.8, "sci-fi");
 
     expect(movie).toMatchObject({
       name: "Inception",
       year: 2010,
       runtime: 148,
-      imdbRating: 88,
+      imdbRating: 8.8,
       genre: "sci-fi",
     });
     expect(movie.id).toMatch(
@@ -57,6 +58,42 @@ describe("createMovie", () => {
       (err as { cause?: { code?: string } })?.cause?.code ??
       undefined;
     expect(code).toBe("23505");
+  });
+
+  it("rejects a year outside the allowed range (check constraint)", async () => {
+    const err = await createMovie("Back to the Future", 1000).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23514");
+  });
+
+  it("rejects a non-positive runtime (check constraint)", async () => {
+    const err = await createMovie("Inception", 2010, 0).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23514");
+  });
+
+  it("rejects an IMDb rating above 10 (check constraint)", async () => {
+    const err = await createMovie("Inception", 2010, 148, 11).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23514");
   });
 });
 
@@ -138,7 +175,7 @@ describe("updateMovie", () => {
       imdbRating: 8.7,
       genre: "sci-fi",
     });
-    expect(updatedMovie.updatedAt.getTime()).toBeGreaterThanOrEqual(
+    expect(updatedMovie!.updatedAt.getTime()).toBeGreaterThanOrEqual(
       movie.updatedAt.getTime(),
     );
   });
@@ -157,6 +194,26 @@ describe("updateMovie", () => {
 
     expect(updated).toBeUndefined();
     expect((await getMovieById(movie.id))?.name).toBe("Inception");
+  });
+
+  it("rejects a malformed UUID", async () => {
+    await expect(updateMovie("not-a-uuid", "Nope")).rejects.toThrow(
+      "Invalid UUID",
+    );
+  });
+
+  it("enforces the check constraints on update", async () => {
+    const movie = await createMovie("Inception", 2010);
+
+    const err = await updateMovie(movie.id, "Inception", 2200).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23514");
   });
 });
 
@@ -179,5 +236,34 @@ describe("firstOrUndefined", () => {
 
   it("returns the first element without touching the rest", () => {
     expect(firstOrUndefined([1, 2, 3])).toBe(1);
+  });
+});
+
+describe("getMoviesMetaData", () => {
+  it("returns a MoviesMeta object for an empty database", async () => {
+    const meta = await getMoviesMetaData();
+    expect(meta).toMatchObject({
+      totalMovies: 0,
+      moviesPerYear: [],
+      moviesPerGenre: [],
+    });
+  });
+
+  it("MoviesMeta`s properties reflect database state", async () => {
+    await createMovie("Inception", 2010, 175, 8.7, "sci-fi");
+    await createMovie("Sicario", 2015);
+
+    const meta = await getMoviesMetaData();
+    expect(meta).toMatchObject({
+      totalMovies: 2,
+      moviesPerYear: [
+        { year: 2010, count: 1 },
+        { year: 2015, count: 1 },
+      ],
+      moviesPerGenre: [
+        { genre: null, count: 1 },
+        { genre: "sci-fi", count: 1 },
+      ],
+    });
   });
 });

@@ -1,0 +1,3 @@
+ALTER TABLE "movies" ADD CONSTRAINT "movies_year_range" CHECK ("movies"."year" is null or "movies"."year" between 1750 and 2100);--> statement-breakpoint
+ALTER TABLE "movies" ADD CONSTRAINT "movies_runtime_range" CHECK ("movies"."runtime" is null or "movies"."runtime" between 1 and 9999);--> statement-breakpoint
+ALTER TABLE "movies" ADD CONSTRAINT "movies_imdb_rating_range" CHECK ("movies"."imdb_rating" is null or "movies"."imdb_rating" between 0 and 10);

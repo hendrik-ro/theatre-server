@@ -1,0 +1,102 @@
+{
+  "id": "ae4c97b8-48fe-4f1d-8f78-e93b1f19ff80",
+  "prevId": "11e51932-2a40-47aa-bbec-dbf9bbde8033",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.movies": {
+      "name": "movies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "runtime": {
+          "name": "runtime",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imdb_rating": {
+          "name": "imdb_rating",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genre": {
+          "name": "genre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "movies_name_unique": {
+          "name": "movies_name_unique",
+          "nullsNotDistinct": false,
+          "columns": ["name"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "movies_year_range": {
+          "name": "movies_year_range",
+          "value": "\"movies\".\"year\" is null or \"movies\".\"year\" between 1750 and 2100"
+        },
+        "movies_runtime_range": {
+          "name": "movies_runtime_range",
+          "value": "\"movies\".\"runtime\" is null or \"movies\".\"runtime\" between 1 and 9999"
+        },
+        "movies_imdb_rating_range": {
+          "name": "movies_imdb_rating_range",
+          "value": "\"movies\".\"imdb_rating\" is null or \"movies\".\"imdb_rating\" between 0 and 10"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

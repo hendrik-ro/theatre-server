@@ -1,19 +1,26 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { z } from "zod";
 
-dotenv.config({ path: path.resolve(process.cwd(), "../.env") });
+const schema = z.object({
+  NODE_ENV: z.enum(["development", "production", "test"]),
+  SERVER_PORT: z.coerce.number().int().min(0).max(65535),
+  DB_URL: z.url(),
+});
 
-const nodeEnv = process.env.NODE_ENV;
-if (!nodeEnv) {
-  throw new Error("NODE_ENV not set");
-}
+// Resolve from this module's location so the file is found regardless of
+// the process cwd. Both src/ and dist/ sit one level below the repo root.
+const envPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../.env",
+);
+dotenv.config({ path: envPath });
 
-const dbUrl = process.env.DB_URL;
-if (!dbUrl) {
-  throw new Error("DB_URL not set");
-}
+const env = schema.parse(process.env);
 
 export const config = {
-  nodeEnv: nodeEnv,
-  db: dbUrl,
+  env: env.NODE_ENV,
+  serverPort: env.SERVER_PORT,
+  dbURL: env.DB_URL,
 };

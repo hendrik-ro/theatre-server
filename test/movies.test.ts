@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
 
 vi.mock("../src/db/queries/movies.js", () => ({
   createMovie: vi.fn(),
   deleteMovie: vi.fn(),
   getAllMovies: vi.fn(),
   getMovieById: vi.fn(),
+  getMoviesMetaData: vi.fn(),
   updateMovie: vi.fn(),
 }));
 
@@ -14,6 +16,7 @@ import {
   deleteMovie,
   getAllMovies,
   getMovieById,
+  getMoviesMetaData,
   updateMovie,
 } from "../src/db/queries/movies.js";
 import {
@@ -21,9 +24,10 @@ import {
   moviesDeleteById,
   moviesGetAll,
   moviesGetById,
+  moviesMetaData,
   moviesUpdateById,
 } from "../src/controllers/movies.js";
-import type { Movie } from "../src/models/movies.js";
+import type { Movie, MoviesMeta } from "../src/models/movies.js";
 
 const movie: Movie = {
   id: "8fd27a76-dde8-41fb-8413-940aa9a2de21",
@@ -32,7 +36,7 @@ const movie: Movie = {
   name: "The Matrix",
   year: 1999,
   runtime: 136,
-  imdbRating: 87,
+  imdbRating: 8.7,
   genre: "sci-fi",
 };
 
@@ -147,7 +151,7 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imbdRating: 8.7,
+      imdbRating: 8.7,
       genre: "sci-fi",
     };
     await moviesCreate(makeRequest({ body }), res, makeNext());
@@ -161,6 +165,29 @@ describe("moviesCreate", () => {
     );
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(movie);
+  });
+
+  it("rejects an invalid body without calling createMovie", async () => {
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesCreate(
+      makeRequest({ body: { name: "The Matrix", year: 9999 } }),
+      res,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(expect.any(ZodError));
+    expect(createMovie).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("rejects a body with a missing name without calling createMovie", async () => {
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesCreate(makeRequest({ body: { year: 1999 } }), res, next);
+
+    expect(next).toHaveBeenCalledWith(expect.any(ZodError));
+    expect(createMovie).not.toHaveBeenCalled();
   });
 
   it("forwards creation errors to next", async () => {
@@ -214,6 +241,23 @@ describe("moviesUpdateById", () => {
     );
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(updated);
+  });
+
+  it("rejects an invalid body without calling updateMovie", async () => {
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesUpdateById(
+      makeRequest({
+        params: { id: movie.id },
+        body: { name: "X", runtime: 0 },
+      }),
+      res,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(expect.any(ZodError));
+    expect(updateMovie).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   it("responds 404 when no movie matches the id", async () => {
@@ -281,6 +325,44 @@ describe("moviesDeleteById", () => {
 
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Invalid UUID" }),
+    );
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+});
+
+describe("moviesMetaData", () => {
+  it("responds 200 with the movies metadata", async () => {
+    const meta: MoviesMeta = {
+      totalMovies: 42,
+      moviesPerYear: [
+        { year: 1999, count: 3 },
+        { year: null, count: 1 },
+      ],
+      moviesPerGenre: [
+        { genre: "sci-fi", count: 4 },
+        { genre: null, count: 2 },
+      ],
+    };
+    vi.mocked(getMoviesMetaData).mockResolvedValue(meta);
+
+    const res = makeResponse();
+    await moviesMetaData(makeRequest(), res, makeNext());
+
+    expect(getMoviesMetaData).toHaveBeenCalledOnce();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(meta);
+  });
+
+  it("forwards query errors to next", async () => {
+    vi.mocked(getMoviesMetaData).mockRejectedValue(new Error("db down"));
+
+    const res = makeResponse();
+    const next = makeNext();
+    await moviesMetaData(makeRequest(), res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "db down" }),
     );
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).not.toHaveBeenCalled();
