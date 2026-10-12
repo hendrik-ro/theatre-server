@@ -11,6 +11,7 @@ import {
   updateMovie,
 } from "../src/db/queries/movies.js";
 import { firstOrUndefined } from "../src/db/queries/utils.js";
+import { movieInputSchema } from "../src/models/movies.js";
 
 beforeEach(async () => {
   await db.execute(sql`TRUNCATE TABLE movies`);
@@ -60,40 +61,45 @@ describe("createMovie", () => {
     expect(code).toBe("23505");
   });
 
-  it("rejects a year outside the allowed range (check constraint)", async () => {
-    const err = await createMovie("Back to the Future", 1000).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23514");
+  it("rejects a year outside the allowed range (zod validation)", async () => {
+    const input = { name: "Back to the Future", year: 1000 };
+    const result = movieInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = result.error.format();
+      expect(errors.year?._errors).toContain(
+        "Too small: expected number to be >=1750",
+      );
+    }
   });
 
-  it("rejects a non-positive runtime (check constraint)", async () => {
-    const err = await createMovie("Inception", 2010, 0).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23514");
+  it("rejects a non-positive runtime (zod validation)", async () => {
+    const input = { name: "Inception", year: 2010, runtime: 0 };
+    const result = movieInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = result.error.format();
+      expect(errors.runtime?._errors).toContain(
+        "Too small: expected number to be >=1",
+      );
+    }
   });
 
-  it("rejects an IMDb rating above 10 (check constraint)", async () => {
-    const err = await createMovie("Inception", 2010, 148, 11).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23514");
+  it("rejects an IMDb rating above 10 (zod validation)", async () => {
+    const input = {
+      name: "Inception",
+      year: 2010,
+      runtime: 148,
+      imdbRating: 11,
+    };
+    const result = movieInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = result.error.format();
+      expect(errors.imdbRating?._errors).toContain(
+        "Too big: expected number to be <=10",
+      );
+    }
   });
 });
 
@@ -202,18 +208,16 @@ describe("updateMovie", () => {
     );
   });
 
-  it("enforces the check constraints on update", async () => {
-    const movie = await createMovie("Inception", 2010);
-
-    const err = await updateMovie(movie.id, "Inception", 2200).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23514");
+  it("enforces the zod constraints on update", async () => {
+    const input = { name: "Inception", year: 2200 };
+    const result = movieInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = result.error.format();
+      expect(errors.year?._errors).toContain(
+        "Too big: expected number to be <=2027",
+      );
+    }
   });
 });
 
