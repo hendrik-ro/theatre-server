@@ -25,7 +25,10 @@ export const errorHandler: ErrorRequestHandler = (err, _, res, next) => {
     return;
   }
 
-  console.error(err);
+  if (err.type === "entity.too.large") {
+    res.status(413).json({ message: "Payload too large" });
+    return;
+  }
 
   if (pgErrorCode(err) === PG_UNIQUE_VIOLATION) {
     res.status(409).json({ message: "A movie with this name already exists" });
@@ -36,6 +39,8 @@ export const errorHandler: ErrorRequestHandler = (err, _, res, next) => {
     res.status(err.status).json({ message: err.message });
     return;
   }
+
+  console.error(err);
 
   const message =
     config.env === "production"
