@@ -1,18 +1,27 @@
 import { pathToFileURL } from "node:url";
 import express from "express";
 import helmet from "helmet";
-import router from "./routes/movies.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { sessionMiddleware } from "./middleware/session.js";
 import { config } from "./config.js";
 import { closeDB } from "./db/index.js";
+import { sessionStore } from "./db/sessionStore.js";
+import adminRouter from "./routes/admin.js";
+import movieRouter from "./routes/movies.js";
+import userRouter from "./routes/users.js";
 
 const app = express();
 const port = config.serverPort;
 
+const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
+
 app.use(helmet());
 app.use(express.json({ limit: "16kb" }));
+app.use(sessionMiddleware);
 
-app.use("/api/movies", router);
+app.use("/api/movies", movieRouter);
+app.use("/api/users", userRouter);
+app.use("/api/admin", adminRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -27,6 +36,11 @@ app.use("/api", (_req, res) => {
 app.use(errorHandler);
 
 function startServer() {
+  const pruneTimer = setInterval(() => {
+    sessionStore.prune().catch(() => {});
+  }, SESSION_PRUNE_INTERVAL_MS);
+  pruneTimer.unref();
+
   const server = app.listen(port, () => {
     console.log(`Server listening on http://localhost:${port}`);
   });

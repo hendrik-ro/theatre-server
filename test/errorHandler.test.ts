@@ -43,9 +43,34 @@ describe("errorHandler", () => {
     });
   });
 
-  it("maps a unique constraint violation to 409", () => {
+  it("maps a body too large error to 413", () => {
     const res = makeResponse();
-    const err = Object.assign(new Error("duplicate key"), { code: "23505" });
+    const err = Object.assign(new Error("Payload too large"), {
+      type: "entity.too.large",
+    });
+    errorHandler(err, req, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({ message: "Payload too large" });
+  });
+
+  it("maps a JSON parse failure to 400", () => {
+    const res = makeResponse();
+    const err = Object.assign(new Error("Unterminated string"), {
+      type: "entity.parse.failed",
+    });
+    errorHandler(err, req, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: "Invalid JSON body" });
+  });
+
+  it("maps a unique constraint violation to 409 with a constraint-specific message", () => {
+    const res = makeResponse();
+    const err = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint_name: "movies_name_unique",
+    });
     errorHandler(err, req, res, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(409);
@@ -54,14 +79,62 @@ describe("errorHandler", () => {
     });
   });
 
-  it("maps a unique violation nested in cause to 409", () => {
+  it("maps a duplicate username to a username-specific message", () => {
     const res = makeResponse();
-    const err = new Error("drizzle wrapper", {
-      cause: Object.assign(new Error("duplicate key"), { code: "23505" }),
+    const err = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint_name: "users_username_unique",
     });
     errorHandler(err, req, res, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "This username is already taken",
+    });
+  });
+
+  it("maps a duplicate email to an email-specific message", () => {
+    const res = makeResponse();
+    const err = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint_name: "users_email_unique",
+    });
+    errorHandler(err, req, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "An account with this email already exists",
+    });
+  });
+
+  it("falls back to a generic message for an unmapped unique violation", () => {
+    const res = makeResponse();
+    const err = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint_name: "some_future_unique",
+    });
+    errorHandler(err, req, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "This value is already in use",
+    });
+  });
+
+  it("maps a unique violation nested in cause to 409", () => {
+    const res = makeResponse();
+    const err = new Error("drizzle wrapper", {
+      cause: Object.assign(new Error("duplicate key"), {
+        code: "23505",
+        constraint_name: "movies_name_unique",
+      }),
+    });
+    errorHandler(err, req, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "A movie with this name already exists",
+    });
   });
 
   it("honors the status of an HttpError", () => {

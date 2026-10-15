@@ -10,11 +10,18 @@ import {
   resetMovies,
   updateMovie,
 } from "../src/db/queries/movies.js";
+import {
+  createUser,
+  deleteUser,
+  getAllUsers,
+  getUserById,
+  resetUsers,
+} from "../src/db/queries/users.js";
 import { firstOrUndefined } from "../src/db/queries/utils.js";
 import { movieInputSchema } from "../src/models/movies.js";
 
 beforeEach(async () => {
-  await db.execute(sql`TRUNCATE TABLE movies`);
+  await db.execute(sql`TRUNCATE TABLE movies, users`);
 });
 
 describe("createMovie", () => {
@@ -269,5 +276,153 @@ describe("getMoviesMetaData", () => {
         { genre: null, count: 1 },
       ],
     });
+  });
+});
+
+describe("createUser", () => {
+  it("inserts a user and returns the row with generated fields", async () => {
+    const user = await createUser(
+      "john",
+      "john@example.com",
+      "hashed_password",
+    );
+
+    expect(user).toMatchObject({
+      username: "john",
+      email: "john@example.com",
+      passwordHash: "hashed_password",
+      role: "user",
+    });
+    expect(user.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(user.createdAt).toBeInstanceOf(Date);
+    expect(user.updatedAt).toBeInstanceOf(Date);
+    expect(user.emailVerifiedAt).toBeNull();
+    expect(user.lastLoginAt).toBeNull();
+  });
+
+  it("sets role to admin when specified", async () => {
+    const user = await createUser(
+      "admin",
+      "admin@example.com",
+      "admin_hash",
+      "admin",
+    );
+
+    expect(user.role).toBe("admin");
+  });
+
+  it("stores email in lowercase", async () => {
+    const user = await createUser(
+      "john",
+      "JOHN@EXAMPLE.COM",
+      "hashed_password",
+    );
+
+    expect(user.email).toBe("john@example.com");
+  });
+
+  it("rejects duplicate name (unique constraint)", async () => {
+    await createUser("john", "john@example.com", "hashed_password");
+
+    const err = await createUser("john", "another@example.com", "hash2").then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23505");
+  });
+
+  it("rejects duplicate email (unique constraint)", async () => {
+    await createUser("john", "shared@example.com", "hashed_password");
+
+    const err = await createUser("jane", "shared@example.com", "hash2").then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23505");
+  });
+});
+
+describe("getAllUsers", () => {
+  it("returns an empty list when there are no users", async () => {
+    expect(await getAllUsers()).toEqual([]);
+  });
+
+  it("returns all inserted users", async () => {
+    await createUser("john", "john@example.com", "hash1");
+    await createUser("jane", "jane@example.com", "hash2");
+
+    const users = await getAllUsers();
+    expect(users.map((u) => u.username).sort()).toEqual(["jane", "john"]);
+  });
+});
+
+describe("getUserById", () => {
+  it("finds a user by id", async () => {
+    const created = await createUser("john", "john@example.com", "hash");
+
+    expect(await getUserById(created.id)).toEqual(created);
+  });
+
+  it("returns undefined for an unknown id", async () => {
+    expect(
+      await getUserById("00000000-0000-0000-0000-000000000000"),
+    ).toBeUndefined();
+  });
+
+  it("rejects a malformed UUID", async () => {
+    await expect(getUserById("not-a-uuid")).rejects.toThrow("Invalid UUID");
+  });
+});
+
+describe("deleteUser", () => {
+  it("deletes a user by UUID", async () => {
+    const created = await createUser("john", "john@example.com", "hash");
+    await deleteUser(created.id);
+
+    expect(await getUserById(created.id)).toBeUndefined();
+  });
+
+  it("leaves other users untouched", async () => {
+    const john = await createUser("john", "john@example.com", "hash1");
+    await createUser("jane", "jane@example.com", "hash2");
+
+    await deleteUser(john.id);
+
+    const users = await getAllUsers();
+    expect(users.map((u) => u.username)).toEqual(["jane"]);
+  });
+
+  it("is a no-op for an unknown UUID", async () => {
+    await createUser("john", "john@example.com", "hash");
+
+    await deleteUser("00000000-0000-0000-0000-000000000000");
+
+    expect((await getAllUsers()).map((u) => u.username)).toEqual(["john"]);
+  });
+
+  it("rejects a malformed UUID", async () => {
+    await expect(deleteUser("not-a-uuid")).rejects.toThrow("Invalid UUID");
+  });
+});
+
+describe("resetUsers", () => {
+  it("resets the users table", async () => {
+    await createUser("john", "john@example.com", "hash1");
+    await createUser("jane", "jane@example.com", "hash2");
+    const users = await getAllUsers();
+    expect(users.map((u) => u.username).sort()).toEqual(["jane", "john"]);
+
+    await resetUsers();
+    expect(await getAllUsers()).toEqual([]);
   });
 });

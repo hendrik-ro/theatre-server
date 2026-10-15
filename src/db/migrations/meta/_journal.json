@@ -8,6 +8,27 @@
       "when": 1791833384879,
       "tag": "0000_lame_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792015046672,
+      "tag": "0001_minor_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792093056927,
+      "tag": "0002_nappy_master_mold",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792097953174,
+      "tag": "0003_luxuriant_mojo",
+      "breakpoints": true
     }
   ]
 }

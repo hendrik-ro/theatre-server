@@ -1,20 +1,19 @@
 import { Router } from "express";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   moviesCreate,
-  moviesDeleteById,
   moviesGetAll,
   moviesGetById,
   moviesMetaData,
   moviesUpdateById,
 } from "../controllers/movies.js";
 
-const router = Router();
+const movieRouter = Router();
 
-router.get("/", moviesGetAll);
-router.get("/meta", moviesMetaData);
-router.get("/:id", moviesGetById);
-router.post("/", moviesCreate);
-router.post("/:id", moviesUpdateById);
-router.delete("/:id", moviesDeleteById);
+movieRouter.get("/", asyncHandler(moviesGetAll));
+movieRouter.get("/meta", asyncHandler(moviesMetaData));
+movieRouter.get("/:id", asyncHandler(moviesGetById));
+movieRouter.post("/", asyncHandler(moviesCreate));
+movieRouter.put("/:id", asyncHandler(moviesUpdateById));
 
-export default router;
+export default movieRouter;

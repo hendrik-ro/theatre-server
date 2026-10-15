@@ -1,9 +1,9 @@
 import { eq, count, asc, desc } from "drizzle-orm";
 import { db } from "../index.js";
-import { movies } from "../schema.js";
-import { firstOrUndefined, isUUID } from "./utils.js";
+import { movies } from "../schema/movies.sql.js";
+import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
 import { Movie, MoviesMeta } from "../../models/movies.js";
-import { HttpError } from "../../utils/errors.js";
+import { config } from "../../config.js";
 
 export async function createMovie(
   name: string,
@@ -37,7 +37,7 @@ export async function getMovieById(id: string): Promise<Movie | undefined> {
 }
 
 export async function deleteMovie(id: string): Promise<void> {
-  if (!isUUID(id)) throw new HttpError(400, "Invalid UUID");
+  assertUUID(id);
   await db.delete(movies).where(eq(movies.id, id));
 }
 
@@ -49,7 +49,7 @@ export async function updateMovie(
   imdbRating?: number,
   genre?: string,
 ): Promise<Movie | undefined> {
-  if (!isUUID(id)) throw new HttpError(400, "Invalid UUID");
+  assertUUID(id);
   const [result] = await db
     .update(movies)
     .set({
@@ -65,6 +65,7 @@ export async function updateMovie(
 }
 
 export async function resetMovies(): Promise<void> {
+  if (!["development", "test"].includes(config.env)) return;
   await db.delete(movies);
 }
 

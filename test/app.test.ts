@@ -27,10 +27,27 @@ describe("app", () => {
     expect(res.body).toEqual({ message: "Payload too large" });
   });
 
+  it("responds with 400 for a malformed JSON body", async () => {
+    const res = await request(app)
+      .post("/api/movies")
+      .set("Content-Type", "application/json")
+      .send('{"name": "broken');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ message: "Invalid JSON body" });
+  });
+
   it("responds ok on the health endpoint", async () => {
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "ok" });
+  });
+
+  it("does not set a session cookie for anonymous requests", async () => {
+    const res = await request(app).get("/api/health");
+
+    expect(res.status).toBe(200);
+    expect(res.headers["set-cookie"]).toBeUndefined();
   });
 });

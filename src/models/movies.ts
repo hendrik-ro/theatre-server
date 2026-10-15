@@ -3,14 +3,14 @@ import { z } from "zod";
 const MAX_YEAR = new Date().getFullYear() + 1;
 
 export interface Movie {
-  id: string;
   name: string;
-  createdAt: Date;
-  updatedAt: Date;
   year: number | null;
   runtime: number | null;
   imdbRating: number | null;
   genre: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  id: string;
 }
 
 export interface MoviesMeta {
