@@ -8,7 +8,7 @@ import {
 } from "../models/users.js";
 import {
   createUser,
-  getUserByEmail,
+  getUserByUsername,
   setLastLogin,
 } from "../db/queries/users.js";
 import {
@@ -41,7 +41,7 @@ export const usersRegister: AsyncRequestHandler = async (req, res) => {
 
 export const usersLogin: AsyncRequestHandler = async (req, res) => {
   const input = userLoginSchema.parse(req.body);
-  const user = await getUserByEmail(input.email);
+  const user = await getUserByUsername(input.username);
   // Same response for unknown email and wrong password: answering
   // differently leaks which emails are registered.
   if (!user) {

@@ -18,10 +18,15 @@ import {
   resetUsers,
 } from "../src/db/queries/users.js";
 import { firstOrUndefined } from "../src/db/queries/utils.js";
+import { users } from "../src/db/schema/users.sql.js";
 import { movieInputSchema } from "../src/models/movies.js";
 
 beforeEach(async () => {
-  await db.execute(sql`TRUNCATE TABLE movies, users`);
+  await db.execute(sql`TRUNCATE TABLE movies, users, app_bootstrap`);
+  // Pre-seed the first-admin claim so createUser in the generic suites
+  // below deterministically gets role "user"; the bootstrap describe
+  // starts from a fresh claim instead.
+  await db.execute(sql`INSERT INTO app_bootstrap (key) VALUES ('first_admin')`);
 });
 
 describe("createMovie", () => {
@@ -302,17 +307,6 @@ describe("createUser", () => {
     expect(user.lastLoginAt).toBeNull();
   });
 
-  it("sets role to admin when specified", async () => {
-    const user = await createUser(
-      "admin",
-      "admin@example.com",
-      "admin_hash",
-      "admin",
-    );
-
-    expect(user.role).toBe("admin");
-  });
-
   it("stores email in lowercase", async () => {
     const user = await createUser(
       "john",
@@ -349,6 +343,48 @@ describe("createUser", () => {
       (err as { cause?: { code?: string } })?.cause?.code ??
       undefined;
     expect(code).toBe("23505");
+  });
+});
+
+describe("bootstrap", () => {
+  // Undo the claim the global beforeEach pre-seeds: these tests exercise
+  // the claim itself and each needs to start from an empty app_bootstrap.
+  beforeEach(async () => {
+    await db.execute(sql`TRUNCATE TABLE app_bootstrap`);
+  });
+
+  it("the first created user becomes admin, the second stays user", async () => {
+    const first = await createUser("alice", "alice@example.com", "hash1");
+    const second = await createUser("bob", "bob@example.com", "hash2");
+
+    expect(first.role).toBe("admin");
+    expect(second.role).toBe("user");
+  });
+
+  it("a failed first creation releases the claim", async () => {
+    // A user row that exists without having claimed (inserted directly)
+    // makes createUser's insert fail on the unique constraint after the
+    // claim was taken; the transaction must roll the claim back so the
+    // next createUser can still become admin.
+    await db.insert(users).values({
+      username: "john",
+      email: "john@example.com",
+      passwordHash: "hash",
+      role: "user",
+    });
+
+    const err = await createUser("john", "another@example.com", "hash2").then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code ??
+      undefined;
+    expect(code).toBe("23505");
+
+    const retry = await createUser("jane", "jane@example.com", "hash3");
+    expect(retry.role).toBe("admin");
   });
 });
 

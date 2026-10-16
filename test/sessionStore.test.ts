@@ -7,6 +7,13 @@ import { SessionStore } from "../src/db/sessionStore.js";
 
 const store = new SessionStore();
 
+// Minimal session fixtures: express-session's Cookie type requires
+// originalMaxAge, but the store only ever reads cookie.maxAge, so the
+// fixtures stay small and are cast to SessionData.
+type FixtureSession = { cookie?: { maxAge: number }; userId?: string };
+const fixtureSession = (data: FixtureSession) =>
+  data as unknown as session.SessionData;
+
 function get(sid: string) {
   return new Promise((resolve, reject) =>
     store.get(sid, (err, sessionData) =>
@@ -15,9 +22,11 @@ function get(sid: string) {
   );
 }
 
-function set(sid: string, sessionData: session.SessionData) {
+function set(sid: string, sessionData: FixtureSession) {
   return new Promise((resolve, reject) =>
-    store.set(sid, sessionData, (err) => (err ? reject(err) : resolve(null))),
+    store.set(sid, fixtureSession(sessionData), (err) =>
+      err ? reject(err) : resolve(null),
+    ),
   );
 }
 
@@ -27,9 +36,11 @@ function destroy(sid: string) {
   );
 }
 
-function touch(sid: string, sessionData: session.SessionData) {
+function touch(sid: string, sessionData: FixtureSession) {
   return new Promise((resolve, reject) =>
-    store.touch(sid, sessionData, (err) => (err ? reject(err) : resolve(null))),
+    store.touch(sid, fixtureSession(sessionData), (err) =>
+      err ? reject(err) : resolve(null),
+    ),
   );
 }
 
@@ -75,7 +86,7 @@ describe("SessionStore", () => {
   it("get returns null for an expired session", async () => {
     await db.insert(sessions).values({
       sid: "sid-1",
-      sess: { cookie: { maxAge: 1000 }, userId: "u-1" },
+      sess: fixtureSession({ cookie: { maxAge: 1000 }, userId: "u-1" }),
       expire: new Date(Date.now() - 1000),
     });
 
@@ -117,7 +128,7 @@ describe("SessionStore", () => {
   it("prune deletes expired rows and keeps live ones", async () => {
     await db.insert(sessions).values({
       sid: "expired",
-      sess: { cookie: { maxAge: 1000 } },
+      sess: fixtureSession({ cookie: { maxAge: 1000 } }),
       expire: new Date(Date.now() - 1000),
     });
     await set("live", { cookie: { maxAge: 60000 } });

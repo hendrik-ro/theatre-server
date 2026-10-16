@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -b",
     "start": "node dist/server.js",
-    "typecheck": "tsc -b --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc -b --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.test.json",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "test": "vitest run",

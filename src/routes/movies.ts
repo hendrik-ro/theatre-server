@@ -7,13 +7,14 @@ import {
   moviesMetaData,
   moviesUpdateById,
 } from "../controllers/movies.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const movieRouter = Router();
 
 movieRouter.get("/", asyncHandler(moviesGetAll));
 movieRouter.get("/meta", asyncHandler(moviesMetaData));
 movieRouter.get("/:id", asyncHandler(moviesGetById));
-movieRouter.post("/", asyncHandler(moviesCreate));
-movieRouter.put("/:id", asyncHandler(moviesUpdateById));
+movieRouter.post("/", requireAuth, asyncHandler(moviesCreate));
+movieRouter.put("/:id", requireAuth, asyncHandler(moviesUpdateById));
 
 export default movieRouter;

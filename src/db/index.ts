@@ -4,9 +4,10 @@ import postgres from "postgres";
 import { movies } from "./schema/movies.sql.js";
 import { sessions } from "./schema/sessions.sql.js";
 import { users } from "./schema/users.sql.js";
+import { appBootstrap } from "./schema/appBootstrap.sql.js";
 import { config } from "../config.js";
 
-const schema = { movies, users, sessions };
+const schema = { movies, users, sessions, appBootstrap };
 
 const conn = postgres(config.dbURL);
 export const db = drizzle(conn, { schema });
