@@ -1,47 +1,20 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { app } from "../src/server.js";
 import { db } from "../src/db/index.js";
-import { sessions } from "../src/db/schema/sessions.sql.js";
+import { refreshTokens } from "../src/db/schema/refreshTokens.sql.js";
 import {
   deleteUser,
   getUserByEmail,
   resetUsers,
 } from "../src/db/queries/users.js";
-import { sessionStore } from "../src/db/sessionStore.js";
-
-const registerInput = {
-  username: "movielover",
-  email: "movielover@example.com",
-  password: "testpassword1000",
-};
-
-async function registerUser() {
-  const res = await request(app)
-    .post("/api/users/register")
-    .send(registerInput);
-  expect(res.status).toBe(201);
-}
-
-function sidFromSetCookie(setCookie: unknown): string {
-  const header = Array.isArray(setCookie) ? setCookie[0] : String(setCookie);
-  // express-session signs the cookie value: "s:<sid>.<signature>"
-  const value = decodeURIComponent(header.split("=")[1]!.split(";")[0]!);
-  return value.slice("s:".length).split(".")[0]!;
-}
-
-function storeGet(sid: string) {
-  return new Promise((resolve, reject) =>
-    sessionStore.get(sid, (err, sessionData) =>
-      err ? reject(err) : resolve(sessionData),
-    ),
-  );
-}
+import { hashToken } from "../src/auth/hash.js";
+import { cookieValue, registerInput, registerUser } from "./helpers.js";
 
 describe("users", () => {
   beforeEach(async () => {
     await resetUsers();
-    await db.delete(sessions);
   });
 
   it("register creates a user", async () => {
@@ -78,7 +51,7 @@ describe("users", () => {
   });
 
   it("login with a wrong password returns 401 invalid credentials", async () => {
-    await registerUser();
+    await registerUser(app);
 
     const res = await request(app)
       .post("/api/users/login")
@@ -97,8 +70,8 @@ describe("users", () => {
     expect(res.body).toEqual({ message: expect.any(String) });
   });
 
-  it("login issues a session cookie bound to the user", async () => {
-    await registerUser();
+  it("login issues JWT cookies bound to the user", async () => {
+    await registerUser(app);
 
     const res = await request(app).post("/api/users/login").send({
       username: registerInput.username,
@@ -108,19 +81,28 @@ describe("users", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ username: "movielover" });
 
-    const setCookie = res.headers["set-cookie"]!;
-    const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
-    expect(cookie).toContain("theatre.sid=");
-    expect(cookie).toContain("HttpOnly");
+    const headers = (res.headers["set-cookie"] as unknown as string[]) ?? [
+      res.headers["set-cookie"],
+    ];
+    const accessCookie = headers.find((h) => h.startsWith("theatre.jwt="));
+    const refreshCookie = headers.find((h) => h.startsWith("theatre.refresh="));
+    expect(accessCookie).toContain("HttpOnly");
+    expect(refreshCookie).toContain("HttpOnly");
 
-    const sid = sidFromSetCookie(setCookie);
-    const sessionData = (await storeGet(sid)) as { userId?: string };
+    // The refresh cookie's token matches the hashed row bound to the user.
+    const refreshValue = cookieValue(headers, "theatre.refresh");
     const user = await getUserByEmail(registerInput.email);
-    expect(sessionData.userId).toBe(user!.id);
+    const rows = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, user!.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.tokenHash).toBe(hashToken(refreshValue!));
+    expect(rows[0]!.revoked).toBe(false);
     expect(user!.lastLoginAt).not.toBeNull();
   });
 
-  it("GET /api/users/me without a session returns 401", async () => {
+  it("GET /api/users/me without authentication returns 401", async () => {
     const res = await request(app).get("/api/users/me");
 
     expect(res.status).toBe(401);
@@ -129,7 +111,7 @@ describe("users", () => {
 
   it("GET /api/users/me returns the logged-in user without sensitive fields", async () => {
     const agent = request.agent(app);
-    await registerUser();
+    await registerUser(app);
     const login = await agent.post("/api/users/login").send({
       username: registerInput.username,
       password: registerInput.password,
@@ -149,7 +131,7 @@ describe("users", () => {
   });
 
   it("register with a duplicate username returns 409", async () => {
-    await registerUser();
+    await registerUser(app);
 
     const res = await request(app).post("/api/users/register").send({
       username: "movielover",
@@ -162,7 +144,7 @@ describe("users", () => {
   });
 
   it("register with a duplicate email returns 409", async () => {
-    await registerUser();
+    await registerUser(app);
 
     const res = await request(app).post("/api/users/register").send({
       username: "cinephile",
@@ -176,16 +158,15 @@ describe("users", () => {
     });
   });
 
-  it("logout destroys the session and clears the cookie", async () => {
+  it("logout revokes the refresh token and clears the cookies", async () => {
     const agent = request.agent(app);
-    await registerUser();
+    await registerUser(app);
 
     const login = await agent.post("/api/users/login").send({
       username: registerInput.username,
       password: registerInput.password,
     });
     expect(login.status).toBe(200);
-    const sid = sidFromSetCookie(login.headers["set-cookie"]);
 
     const res = await agent.post("/api/users/logout");
 
@@ -196,24 +177,33 @@ describe("users", () => {
     const cleared = (res.headers["set-cookie"] as unknown as string[]).join(
       " ",
     );
-    expect(cleared).toContain("theatre.sid=");
+    expect(cleared).toContain("theatre.jwt=");
+    expect(cleared).toContain("theatre.refresh=");
     expect(cleared).toContain("Expires=Thu, 01 Jan 1970");
 
-    expect(await storeGet(sid)).toBeNull();
+    // The refresh row is revoked server-side.
+    const user = await getUserByEmail(registerInput.email);
+    const rows = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, user!.id));
+    expect(rows[0]!.revoked).toBe(true);
+
+    // The agent lost its cookies: further authenticated calls fail.
     const after = await agent.post("/api/users/logout");
     expect(after.status).toBe(401);
   });
 
-  it("logout without a session returns 401", async () => {
+  it("logout without authentication returns 401", async () => {
     const res = await request(app).post("/api/users/logout");
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ message: "Authentication required" });
   });
 
-  it("rejects a session whose user was deleted", async () => {
+  it("rejects a token whose user was deleted", async () => {
     const agent = request.agent(app);
-    await registerUser();
+    await registerUser(app);
 
     const login = await agent.post("/api/users/login").send({
       username: registerInput.username,

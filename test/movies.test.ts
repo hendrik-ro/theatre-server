@@ -142,13 +142,13 @@ describe("moviesCreate", () => {
     };
     await moviesCreate(makeRequest({ body }), res);
 
-    expect(createMovie).toHaveBeenCalledWith(
-      "The Matrix",
-      1999,
-      136,
-      8.7,
-      "sci-fi",
-    );
+    expect(createMovie).toHaveBeenCalledWith({
+      name: "The Matrix",
+      year: 1999,
+      runtime: 136,
+      imdbRating: 8.7,
+      genre: "sci-fi",
+    });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(movie);
   });
@@ -206,14 +206,13 @@ describe("moviesUpdateById", () => {
       res,
     );
 
-    expect(updateMovie).toHaveBeenCalledWith(
-      movie.id,
-      "The Matrix Reloaded",
-      2003,
-      138,
-      7.4,
-      "sci-fi",
-    );
+    expect(updateMovie).toHaveBeenCalledWith(movie.id, {
+      name: "The Matrix Reloaded",
+      year: 2003,
+      runtime: 138,
+      imdbRating: 7.4,
+      genre: "sci-fi",
+    });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(updated);
   });

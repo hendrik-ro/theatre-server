@@ -36,6 +36,20 @@
       "when": 1792183118329,
       "tag": "0004_modern_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792267438839,
+      "tag": "0005_unknown_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792268343888,
+      "tag": "0006_zippy_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

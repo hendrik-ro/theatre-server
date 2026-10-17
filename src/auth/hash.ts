@@ -1,4 +1,14 @@
 import argon2 from "argon2";
+import { createHash } from "node:crypto";
+
+// Refresh tokens are stored hashed so a database leak does not yield
+// reusable credentials. Unlike passwords, tokens are high-entropy secrets:
+// there is nothing to brute-force, so a fast unsalted hash is the right
+// tool — argon2's cost here would buy nothing but latency on every
+// login and refresh.
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export async function hashPassword(password: string): Promise<string | null> {
   try {

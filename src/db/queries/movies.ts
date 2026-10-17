@@ -1,27 +1,11 @@
 import { eq, count, asc, desc } from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
-import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
-import { Movie, MoviesMeta } from "../../models/movies.js";
-import { config } from "../../config.js";
+import { assertUUID, firstOrUndefined, isDevOrTest, isUUID } from "./utils.js";
+import { Movie, MovieInput, MoviesMeta } from "../../models/movies.js";
 
-export async function createMovie(
-  name: string,
-  year?: number,
-  runtime?: number,
-  imdbRating?: number,
-  genre?: string,
-): Promise<Movie> {
-  const [result] = await db
-    .insert(movies)
-    .values({
-      name,
-      year,
-      runtime,
-      imdbRating,
-      genre,
-    })
-    .returning();
+export async function createMovie(input: MovieInput): Promise<Movie> {
+  const [result] = await db.insert(movies).values(input).returning();
   return result;
 }
 
@@ -43,29 +27,19 @@ export async function deleteMovie(id: string): Promise<void> {
 
 export async function updateMovie(
   id: string,
-  name: string,
-  year?: number,
-  runtime?: number,
-  imdbRating?: number,
-  genre?: string,
+  input: MovieInput,
 ): Promise<Movie | undefined> {
   assertUUID(id);
   const [result] = await db
     .update(movies)
-    .set({
-      name,
-      year,
-      runtime,
-      imdbRating,
-      genre,
-    })
+    .set(input)
     .where(eq(movies.id, id))
     .returning();
   return result;
 }
 
 export async function resetMovies(): Promise<void> {
-  if (!["development", "test"].includes(config.env)) return;
+  if (!isDevOrTest()) return;
   await db.delete(movies);
 }
 

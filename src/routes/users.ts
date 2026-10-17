@@ -7,6 +7,7 @@ import {
   usersLogin,
   usersLogout,
   usersMe,
+  usersRefresh,
   usersRegister,
 } from "../controllers/users.js";
 
@@ -24,5 +25,6 @@ userRouter.delete(
   requireAdminOrSelf,
   asyncHandler(deleteUser),
 );
+userRouter.post("/refresh", asyncHandler(usersRefresh));
 
 export default userRouter;

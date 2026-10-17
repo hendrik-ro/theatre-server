@@ -15,13 +15,7 @@ export const moviesGetAll: AsyncRequestHandler = async (_req, res) => {
 
 export const moviesCreate: AsyncRequestHandler = async (req, res) => {
   const input = movieInputSchema.parse(req.body);
-  const newMovie: Movie = await createMovie(
-    input.name,
-    input.year,
-    input.runtime,
-    input.imdbRating,
-    input.genre,
-  );
+  const newMovie: Movie = await createMovie(input);
   res.status(201).json(newMovie);
 };
 
@@ -38,14 +32,7 @@ export const moviesGetById: AsyncRequestHandler = async (req, res) => {
 export const moviesUpdateById: AsyncRequestHandler = async (req, res) => {
   const id = req.params.id;
   const input = movieInputSchema.parse(req.body);
-  const movie = await updateMovie(
-    id,
-    input.name,
-    input.year,
-    input.runtime,
-    input.imdbRating,
-    input.genre,
-  );
+  const movie = await updateMovie(id, input);
   if (!movie) {
     res.status(404).json({ message: `Failed to update movie ${id}` });
     return;
