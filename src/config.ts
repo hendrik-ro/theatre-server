@@ -12,10 +12,11 @@ const schema = z.object({
 });
 
 // Resolve from this module's location so the file is found regardless of
-// the process cwd. Both src/ and dist/ sit one level below the repo root.
+// the process cwd. Both src/ and dist/ sit one level below the .env file
+// at the repo root.
 const envPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../.env",
+  "../.env",
 );
 dotenv.config({ path: envPath });
 

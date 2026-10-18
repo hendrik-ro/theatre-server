@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: wagoid/commitlint-github-action@v6
+
+      - run: npm run format:check
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run test
+        env:
+          NODE_ENV: test
+          SERVER_PORT: 3000
+          DB_URL: postgres://postgres:postgres@localhost:5432/postgres
+          JWT_SECRET: N8oJbM+irF9xldT++zVX5fSZVAxBxpOSaBfvWYuw7iI=
+          REFRESH_SECRET: 8ba190f9aa18fccbdee5af91e530dbd773f16a0d7b497137fa07ffd98f96bb21
