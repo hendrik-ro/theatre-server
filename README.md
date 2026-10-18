@@ -155,7 +155,7 @@ Prerequisites: Node.js and a running PostgreSQL instance.
 
    Then edit `.env` and set `DB_URL` to your database connection string and
    `JWT_SECRET` and `REFRESH_SECRET` to different random strings of at
-   least 32 characters each (e.g. the output of `openssl rand -hex 32`).
+   least 32 characters each (e.g. the output of `openssl rand -base64 32`).
 
 3. Generate and apply database migrations:
 
@@ -173,6 +173,28 @@ Prerequisites: Node.js and a running PostgreSQL instance.
 The API listens on `SERVER_PORT` (default 3000). For the full app, run the
 [theatre-client](https://github.com/hendrik-ro/theatre-client) dev server
 alongside it; its Vite dev server proxies `/api` requests here.
+
+## Run with Docker
+
+The same stack also runs in containers — API and database together, no
+local PostgreSQL required:
+
+```sh
+docker compose up -d --build
+```
+
+Compose starts a `postgres:18` container (health-checked) and the app
+container, which applies migrations at startup and then serves the API at
+http://localhost:8080. Host port 8080 avoids clashing with the dev server
+on 3000, so both can run side by side.
+
+- Configuration comes from your `.env` (secrets); `DB_URL` is fixed to the
+  compose `db` service, so no connection string setup is needed
+- `NODE_ENV=production` is set in the container, so auth cookies are
+  `secure` — browsers still accept them on `localhost`
+- Database files persist in a named `pgdata` volume: `docker compose down`
+  keeps it, `docker compose down -v` wipes it
+- Podman works as a drop-in: `podman-compose up -d --build`
 
 ## Scripts
 
@@ -195,8 +217,8 @@ All commands are run from the repository root.
 
 ## Roadmap
 
-- **Deployment** — one-command local Postgres via Docker and deployment
-  of app plus database as containers on a single VPS
+- **Deployment** — deployment of app plus database as containers on a
+  single VPS
 - **User ratings** — rate movies yourself; every user's rating feeds a
   shared user average shown alongside the IMDb rating
 - **Watchlist** — earmark movies you want to see and keep them in a
