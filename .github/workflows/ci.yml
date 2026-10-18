@@ -34,6 +34,7 @@ jobs:
       - run: npm ci
 
       - uses: wagoid/commitlint-github-action@v6
+        if: github.event_name == 'pull_request'
 
       - run: npm run format:check
 
