@@ -1,0 +1,213 @@
+[![CI](https://github.com/hendrik-ro/theatre-server/actions/workflows/ci.yml/badge.svg)](https://github.com/hendrik-ro/theatre-server/actions/workflows/ci.yml)
+[![Release](https://github.com/hendrik-ro/theatre-server/actions/workflows/release.yml/badge.svg)](https://github.com/hendrik-ro/theatre-server/actions/workflows/release.yml)
+
+Theatre Server
+==============
+
+The backend of Theatre, a movie-tracking app — built as a portfolio
+project to showcase backend engineering: a well-layered REST API over
+PostgreSQL with full CRUD, cookie-based JWT authentication, role-based
+authorization, integration-tested against a real database, and automated
+versioning and releases.
+
+The Express API serves JSON at `/api/*` and pairs with the React SPA in
+the [theatre-client](https://github.com/hendrik-ro/theatre-client)
+repository; the backend is the focus of this project.
+
+## API Overview
+
+REST endpoints, versioned through semantic-release and JSON errors
+throughout: `{ "message": string }`.
+
+| Method | Route                   | Auth           | Description                             |
+| ------ | ----------------------- | -------------- | --------------------------------------- |
+| POST   | `/api/users/register`   | —              | Create an account and log in            |
+| POST   | `/api/users/login`      | —              | Log in                                  |
+| POST   | `/api/users/logout`     | session        | Revoke the refresh token, clear cookies |
+| POST   | `/api/users/refresh`    | refresh cookie | Rotate the token pair                   |
+| GET    | `/api/users/me`         | session        | Current user profile                    |
+| DELETE | `/api/users/:id`        | self/admin     | Delete an account                       |
+| GET    | `/api/movies`           | —              | List all movies                         |
+| GET    | `/api/movies/meta`      | —              | Movie counts per year and genre         |
+| GET    | `/api/movies/:id`       | —              | Fetch one movie                         |
+| POST   | `/api/movies`           | session        | Create a movie                          |
+| PUT    | `/api/movies/:id`       | session        | Update a movie                          |
+| GET    | `/api/admin/users`      | admin          | List all users                          |
+| DELETE | `/api/admin/users/:id`  | admin          | Delete a user                           |
+| DELETE | `/api/admin/movies/:id` | admin          | Delete a movie                          |
+| GET    | `/api/health`           | —              | Liveness check                          |
+
+## Architecture
+
+Layered structure with one responsibility per directory — routes stay
+thin, controllers hold no SQL, and every layer is independently
+testable:
+
+```
+src/
+├── server.ts          # app wiring: helmet, JSON limit, auth, routers, 404, error handler
+├── config.ts          # env parsed and validated with Zod at startup
+├── routes/            # URL → middleware + controller mapping only
+├── middleware/        # authenticateJWT, requireAuth, requireAdmin(OrSelf), central error handler
+├── controllers/      # request/response handling; no SQL
+├── db/queries/        # data access; transactions live here
+├── db/schema/         # Drizzle table definitions
+├── db/migrations/     # generated, reviewable SQL migrations
+├── models/            # Zod input schemas and domain types
+├── auth/              # password hashing, token signing, cookie handling
+└── utils/             # asyncHandler wrapper, HttpError
+```
+
+Request flow: `route → middleware → controller → Zod validation → query
+layer → PostgreSQL`, with a single central error handler mapping every
+failure mode to a consistent JSON response:
+
+- Zod validation failures → `400`
+- malformed or oversized JSON → `400` / `413`
+- unique-constraint violations → `409` with a user-facing message per
+  constraint
+- JWT failures → `401` with a generic message
+- unknown `/api` routes → JSON `404` instead of an HTML page
+- anything else → `500`, with the real message hidden in production
+
+## Authentication & Security
+
+Not a library call — the whole scheme is implemented deliberately:
+
+- **Argon2** password hashing
+- **JWT pair** in HTTP-only cookies: a 15-minute access token and a
+  7-day refresh token, each signed with its own secret and carrying an
+  enforced `tokenType` claim, so an access token can never be replayed
+  as a refresh token and one leaked key cannot forge the other type
+- **Refresh rotation** on every login and refresh; tokens are stored
+  server-side only as hashes, one active token per user (upsert), and
+  `/api/users/refresh` verifies the presented token against the database
+  row before reissuing
+- **Cookie hardening**: `httpOnly`, `sameSite=lax`, `secure` in
+  production
+- **RBAC** (`user` / `admin`) via `requireAuth`, `requireAdmin`, and
+  `requireAdminOrSelf` middleware; self-service account deletion for
+  regular users, admin module mounted behind one router-level guard
+- **First-admin bootstrap**: the first registration atomically claims the
+  admin role inside the same transaction as the user insert — if the
+  insert fails, the claim rolls back
+- **helmet** security headers, 16kb JSON body limit, identical
+  `Invalid credentials` response for unknown username and wrong password
+  to avoid leaking registered usernames
+
+## Database
+
+PostgreSQL with Drizzle ORM — schema-as-code, typed queries, and
+generated, reviewable SQL migrations (drizzle-kit) applied with
+`npm run migrate`. Unique constraints on `movies.name`,
+`users.username`, and `users.email` are mapped to `409` responses by
+the error handler. UUID primary keys, and timestamps maintained by the
+database.
+
+## Testing
+
+Over 100 integration and unit tests (Vitest + supertest) run against a
+real PostgreSQL database — a service container in CI, and a local
+database in development. The suite covers the API surface end to end:
+auth flows and refresh rotation, RBAC on every guarded route, CRUD on
+movies and users, the first-admin bootstrap race, and error-handler
+mapping. A shared global setup creates and migrates the test database
+once per run instead of once per file.
+
+## Tech Stack
+
+- **Runtime**: [express.js](https://expressjs.com/) on Node.js, TypeScript
+  with project references (`tsc -b`)
+- **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle
+  ORM](https://orm.drizzle.team/) and drizzle-kit migrations
+- **Validation**: [Zod](https://zod.dev/) for both env config and request
+  bodies
+- **Auth**: [argon2](https://github.com/ranisalt/node-argon2),
+  [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)
+- **Tooling**: [oxlint](https://oxc.rs/docs/guide/usage/linter),
+  [Prettier](https://prettier.io/), [Vitest](https://vitest.dev/)
+
+## CI/CD
+
+- **CI** (GitHub Actions): commitlint on PRs, format check, lint,
+  typecheck, and the full test suite against a `postgres:18` service
+  container
+- **Releases**: [husky](https://husky.com/) + [commitlint](https://commitlint.js.org/)
+  enforce Conventional Commits on every commit; [semantic-release](https://semantic-release.gitbook.io/)
+  cuts versions, updates the changelog, and publishes GitHub releases from
+  commit messages — no manual version bumps
+
+## Getting Started
+
+Prerequisites: Node.js and a running PostgreSQL instance.
+
+1. Install dependencies:
+
+   ```sh
+   npm install
+   ```
+
+2. Configure the environment:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   Then edit `.env` and set `DB_URL` to your database connection string and
+   `JWT_SECRET` and `REFRESH_SECRET` to different random strings of at
+   least 32 characters each (e.g. the output of `openssl rand -hex 32`).
+
+3. Generate and apply database migrations:
+
+   ```sh
+   npm run generate
+   npm run migrate
+   ```
+
+4. Start the dev server:
+
+   ```sh
+   npm run dev
+   ```
+
+The API listens on `SERVER_PORT` (default 3000). For the full app, run the
+[theatre-client](https://github.com/hendrik-ro/theatre-client) dev server
+alongside it; its Vite dev server proxies `/api` requests here.
+
+## Scripts
+
+All commands are run from the repository root.
+
+| Command                | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| `npm run dev`          | Start the Express server with tsx watch          |
+| `npm run build`        | Compile to `dist/`                               |
+| `npm run start`        | Run the compiled server                          |
+| `npm run typecheck`    | Type-check all tsconfigs                         |
+| `npm run generate`     | Generate Drizzle migrations                      |
+| `npm run migrate`      | Apply Drizzle migrations                         |
+| `npm test`             | Run tests (Vitest)                               |
+| `npm run test:watch`   | Run tests in watch mode                          |
+| `npm run lint`         | Lint with oxlint                                 |
+| `npm run format`       | Format with Prettier                             |
+| `npm run format:check` | Check formatting without writing                 |
+| `npm run ci`           | Commitlint, format check, lint, typecheck, tests |
+
+## Roadmap
+
+- **Deployment** — one-command local Postgres via Docker and deployment
+  of app plus database as containers on a single VPS
+- **User ratings** — rate movies yourself; every user's rating feeds a
+  shared user average shown alongside the IMDb rating
+- **Watchlist** — earmark movies you want to see and keep them in a
+  separate list until you have watched them
+- **Watched status** — mark movies as watched and track what is still
+  pending
+
+## Contributing
+
+Contributions are welcome! If you find a bug or have a feature request, please open an issue or submit a pull request on the GitHub repository.
+
+## License
+
+AGPL-3.0 License - See [LICENSE.md](LICENSE.md) for details.
