@@ -12,6 +12,7 @@
     "typecheck": "tsc -b --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.test.json",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx src/db/migrate.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "oxlint .",
