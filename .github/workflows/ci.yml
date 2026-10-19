@@ -46,6 +46,5 @@ jobs:
         env:
           NODE_ENV: test
           SERVER_PORT: 3000
-          DB_URL: postgres://postgres:postgres@localhost:5432/postgres
           JWT_SECRET: N8oJbM+irF9xldT++zVX5fSZVAxBxpOSaBfvWYuw7iI=
           REFRESH_SECRET: 8ba190f9aa18fccbdee5af91e530dbd773f16a0d7b497137fa07ffd98f96bb21
