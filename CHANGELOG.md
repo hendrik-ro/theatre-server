@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/hendrik-ro/theatre-server/compare/v1.2.0...v1.2.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* docker compose migration service ([#4](https://github.com/hendrik-ro/theatre-server/issues/4)) ([4023f38](https://github.com/hendrik-ro/theatre-server/commit/4023f389befc146351d430dbc2bdbfc2e67ac345))
+
 # [1.2.0](https://github.com/hendrik-ro/theatre/compare/v1.1.1...v1.2.0) (2026-10-17)
 
 ### Features
