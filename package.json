@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "license": "AGPL-3.0",
   "type": "module",
-  "packageManager": "npm@10.9.8",
+  "packageManager": "npm@12.2.0",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -b",
