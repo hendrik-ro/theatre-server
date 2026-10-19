@@ -154,11 +154,10 @@ yourself, or the compose database (see [Run with Docker](#run-with-docker)).
    cp .env.example .env
    ```
 
-   Then edit `.env`: set `DB_URL` to your database connection string —
-   `postgres://postgres:postgres@localhost:5432/theatre` matches the
-   compose database — and set `JWT_SECRET` and `REFRESH_SECRET` to
-   different random strings of at least 32 characters each (e.g. the
-   output of `openssl rand -base64 32`).
+   Then edit `.env`: set `JWT_SECRET` and `REFRESH_SECRET` to different
+   random strings of at least 32 characters each (e.g. the output of
+   `openssl rand -base64 32`). The remaining defaults match the compose
+   database — override the `POSTGRES_*` parts for your own instance.
 
 3. Generate and apply database migrations:
 
@@ -186,25 +185,30 @@ local PostgreSQL required:
 docker compose up -d --build
 ```
 
-Compose starts a `postgres:18` container (health-checked) and the app
-container, which applies migrations at startup and then serves the API at
-http://localhost:3000 — the same port as the dev server, so stop
-`npm run dev` first if it is running.
+Compose starts a `postgres:18` container (health-checked), a one-shot
+`migrate` container that applies migrations before the app starts, and
+the app container, which serves the API at http://localhost:3000 — the
+same port as the dev server, so stop `npm run dev` first if it is
+running.
 
-- Configuration comes from your `.env` (secrets); the app container's
-  `DB_URL` is fixed to the compose `db` service, so no connection string
-  setup is needed
+- Configuration comes from your `.env` (credentials and secrets); inside
+  the container network `POSTGRES_HOST` and `POSTGRES_PORT` are
+  overridden to route at the compose `db` service, so no per-container
+  connection setup is needed
 - `NODE_ENV=production` is set in the container, so auth cookies are
   `secure` — browsers still accept them on `localhost`
-- The database is published on the standard host port 5432; with `DB_URL`
-  in `.env` pointing at
-  `postgres://postgres:postgres@localhost:5432/theatre`, `npm test` runs
-  the suite against the containerized database. If another local
-  PostgreSQL already owns port 5432, remap the left side of `5432:5432`
-  in `docker-compose.yml`
+- The database is published on the host port from `POSTGRES_PORT`
+  (default 5432); the server and `npm test` connect from the host at
+  `localhost`, so the suite runs against the containerized database. If
+  another local PostgreSQL already owns that port, change
+  `POSTGRES_PORT` in `.env`
 - Database files persist in a named `pgdata` volume: `docker compose down`
   keeps it, `docker compose down -v` wipes it
-- Podman works as a drop-in: `podman-compose up -d --build`
+- Podman works as a drop-in: `podman-compose up -d --build`. One caveat:
+  podman-compose waits for the `migrate` container to stop but does not
+  check its exit code, so a failed migration surfaces as query errors in
+  the API instead of a blocked startup — check the migrate container's
+  logs if the API misbehaves
 
 ## Scripts
 

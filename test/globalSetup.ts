@@ -12,9 +12,9 @@ const TEST_DB_NAME = "theatre_test";
 // vitest itself; each test file resets the tables it touches in its
 // beforeEach.
 export default async function setupTestDatabase() {
-  // config.dbURL is the parsed DB_URL from the repo .env (loaded by the
-  // config import). Raw process.env reads proved unreliable in vitest's
-  // globalSetup module runner.
+  // config.dbURL is the URL assembled from the POSTGRES_* parts in the
+  // repo .env (loaded by the config import). Raw process.env reads
+  // proved unreliable in vitest's globalSetup module runner.
   const sourceUrl = new URL(config.dbURL);
   const host = sourceUrl.hostname;
   if (!["localhost", "127.0.0.1", "::1"].includes(host)) {

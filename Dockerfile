@@ -22,9 +22,9 @@ COPY --from=build /app/dist ./dist
 COPY src/db/migrations ./src/db/migrations
 USER node
 EXPOSE 3000
-# Apply migrations, then start; a failed migration aborts the container.
-# exec replaces the shell so node is PID 1 and receives SIGTERM directly
-# from podman/docker stop — otherwise the graceful shutdown handlers in
-# server.ts never fire and the container gets SIGKILLed at the stop
-# timeout.
-CMD ["sh", "-c", "node dist/db/migrate.js && exec node dist/server.js"]
+# The image only serves; migrations are applied by the one-shot migrate
+# service in docker-compose.yml before the app starts. Exec form makes
+# node PID 1, receiving SIGTERM directly from podman/docker stop —
+# otherwise the graceful shutdown handlers in server.ts never fire and
+# the container gets SIGKILLed at the stop timeout.
+CMD ["node", "dist/server.js"]
