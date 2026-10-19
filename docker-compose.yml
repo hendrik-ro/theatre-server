@@ -2,35 +2,54 @@ services:
   db:
     image: postgres:18
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: theatre
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     # Postgres 18+ stores data in version-specific subdirectories and
     # rejects mounts at the old /var/lib/postgresql/data path; mount the
     # parent instead (docker-library/postgres PR #1259).
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
-      - "5432:5432"
+      # The postgres image always listens on 5432 in-container; only the
+      # host side follows POSTGRES_PORT.
+      - "${POSTGRES_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d theatre"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  migrate:
+    build: .
+    command: node dist/db/migrate.js
+    # config.ts parses the full schema (JWT secrets, NODE_ENV), so the
+    # migrate container needs the repo .env too.
+    env_file: .env
+    environment:
+      # Inside the compose network the db service is `db` and postgres
+      # always listens on 5432; override just the context-specific parts.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db: { condition: service_healthy }
+
   app:
     build: .
     # Reuses the repo .env for secrets; environment below overrides
-    # DB_URL and NODE_ENV to route at the db service.
+    # NODE_ENV and the context-specific POSTGRES_* parts to route at the
+    # db service.
     env_file: .env
     environment:
       NODE_ENV: production
-      DB_URL: postgres://postgres:postgres@db:5432/theatre
+      SERVER_PORT: ${SERVER_PORT}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
     ports:
-      - "3000:3000"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
-      db:
-        condition: service_healthy
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
 
 volumes:
   pgdata:

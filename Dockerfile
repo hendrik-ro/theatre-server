@@ -27,4 +27,4 @@ EXPOSE 3000
 # from podman/docker stop — otherwise the graceful shutdown handlers in
 # server.ts never fire and the container gets SIGKILLed at the stop
 # timeout.
-CMD ["sh", "-c", "node dist/db/migrate.js && exec node dist/server.js"]
+CMD ["node", "dist/server.js"]

@@ -8,10 +8,13 @@ import { config } from "../src/config.js";
 // test modules, and isolation gives each file a fresh module registry).
 // Dev and prod are unaffected: every process gets its own config instance,
 // so the mutation stays inside the vitest process.
+//
+// config.dbURL is the URL config.ts assembles from the POSTGRES_* parts
+// in the repo .env.
 
 const TEST_DB_NAME = "theatre_test";
 
-const sourceUrl = new URL(process.env.DB_URL ?? "");
+const sourceUrl = new URL(config.dbURL);
 const testUrl = new URL(sourceUrl);
 testUrl.pathname = `/${TEST_DB_NAME}`;
 
