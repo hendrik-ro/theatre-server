@@ -19,23 +19,30 @@ repository; the backend is the focus of this project.
 REST endpoints, versioned through semantic-release and JSON errors
 throughout: `{ "message": string }`.
 
-| Method | Route                   | Auth           | Description                             |
-| ------ | ----------------------- | -------------- | --------------------------------------- |
-| POST   | `/api/users/register`   | —              | Create an account and log in            |
-| POST   | `/api/users/login`      | —              | Log in                                  |
-| POST   | `/api/users/logout`     | session        | Revoke the refresh token, clear cookies |
-| POST   | `/api/users/refresh`    | refresh cookie | Rotate the token pair                   |
-| GET    | `/api/users/me`         | session        | Current user profile                    |
-| DELETE | `/api/users/:id`        | self/admin     | Delete an account                       |
-| GET    | `/api/movies`           | —              | List all movies                         |
-| GET    | `/api/movies/meta`      | —              | Movie counts per year and genre         |
-| GET    | `/api/movies/:id`       | —              | Fetch one movie                         |
-| POST   | `/api/movies`           | session        | Create a movie                          |
-| PUT    | `/api/movies/:id`       | session        | Update a movie                          |
-| GET    | `/api/admin/users`      | admin          | List all users                          |
-| DELETE | `/api/admin/users/:id`  | admin          | Delete a user                           |
-| DELETE | `/api/admin/movies/:id` | admin          | Delete a movie                          |
-| GET    | `/api/health`           | —              | Liveness check                          |
+| Method | Route                      | Auth           | Description                             |
+| ------ | -------------------------- | -------------- | --------------------------------------- |
+| POST   | `/api/users/register`      | —              | Create an account and log in            |
+| POST   | `/api/users/login`         | —              | Log in                                  |
+| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies |
+| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                   |
+| GET    | `/api/users/me`            | session        | Current user profile                    |
+| DELETE | `/api/users/:id`           | self/admin     | Delete an account                       |
+| GET    | `/api/movies`              | —              | List all movies                         |
+| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre         |
+| GET    | `/api/movies/:id`          | —              | Fetch one movie                         |
+| POST   | `/api/movies`              | session        | Create a movie                          |
+| PUT    | `/api/movies/:id`          | session        | Update a movie                          |
+| GET    | `/api/watchlists`          | session        | List the current user's watchlist       |
+| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist            |
+| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist       |
+| GET    | `/api/admin/users`         | admin          | List all users                          |
+| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                           |
+| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                          |
+| GET    | `/api/health`              | —              | Liveness check                          |
+
+Here "session" in the Auth column means a valid JWT access-token cookie
+(`theatre.jwt`) issued by registration, login, or refresh — the API
+keeps no server-side session state.
 
 ## Architecture
 
@@ -100,9 +107,9 @@ Not a library call — the whole scheme is implemented deliberately:
 PostgreSQL with Drizzle ORM — schema-as-code, typed queries, and
 generated, reviewable SQL migrations (drizzle-kit) applied with
 `npm run migrate`. Unique constraints on `movies.name`,
-`users.username`, and `users.email` are mapped to `409` responses by
-the error handler. UUID primary keys, and timestamps maintained by the
-database.
+`users.username`, and `users.email`, and the `watchlists` composite
+primary key, are mapped to `409` responses by the error handler. UUID
+primary keys, and timestamps maintained by the database.
 
 ## Testing
 
@@ -110,8 +117,8 @@ Over 100 integration and unit tests (Vitest + supertest) run against a
 real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on
-movies and users, the first-admin bootstrap race, and error-handler
-mapping. A shared global setup creates and migrates the test database
+movies and users, per-user watchlist isolation, the first-admin
+bootstrap race, and error-handler mapping. A shared global setup creates and migrates the test database
 once per run instead of once per file.
 
 ## Tech Stack
@@ -235,8 +242,6 @@ All commands are run from the repository root.
   single VPS
 - **User ratings** — rate movies yourself; every user's rating feeds a
   shared user average shown alongside the IMDb rating
-- **Watchlist** — earmark movies you want to see and keep them in a
-  separate list until you have watched them
 - **Watched status** — mark movies as watched and track what is still
   pending
 
