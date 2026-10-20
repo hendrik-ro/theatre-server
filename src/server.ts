@@ -8,6 +8,7 @@ import { closeDB } from "./db/index.js";
 import adminRouter from "./routes/admin.js";
 import movieRouter from "./routes/movies.js";
 import userRouter from "./routes/users.js";
+import watchlistsRouter from "./routes/watchlists.js";
 
 const app = express();
 const port = config.serverPort;
@@ -21,6 +22,7 @@ app.use(authenticateJWT);
 app.use("/api/movies", movieRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/watchlists", watchlistsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
