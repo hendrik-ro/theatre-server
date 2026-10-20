@@ -50,6 +50,13 @@
       "when": 1792268343888,
       "tag": "0006_zippy_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792526793478,
+      "tag": "0007_zippy_edwin_jarvis",
+      "breakpoints": true
     }
   ]
 }

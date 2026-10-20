@@ -15,6 +15,7 @@ const UNIQUE_VIOLATION_MESSAGES: Record<string, string> = {
   movies_name_unique: "A movie with this name already exists",
   users_username_unique: "This username is already taken",
   users_email_unique: "An account with this email already exists",
+  watchlists_user_id_movie_id_pk: "Movie already in watchlist",
 };
 
 function pgErrorCode(err: unknown): string | undefined {
