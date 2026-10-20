@@ -111,4 +111,24 @@ describe("watchlists", () => {
     const list = await agent.get("/api/watchlists");
     expect(list.body).toEqual([expect.objectContaining({ id: otherMovie.id })]);
   });
+
+  it("GET /api/watchlists isolates from other users", async () => {
+    const agent = request.agent(app);
+    const movie = await createMovie({ name: "Inception" });
+    const otherMovie = await createMovie({ name: "The Matrix" });
+    const userOne = await agent.post("/api/users/register").send(registerInput);
+    expect(userOne.status).toBe(201);
+    await agent.post(`/api/watchlists/${movie.id}`);
+    const userTwo = await agent.post("/api/users/register").send({
+      username: "anotherUser",
+      password: "testtesttest",
+      email: "tester2000@test.com",
+    });
+    expect(userTwo.status).toBe(201);
+    await agent.post(`/api/watchlists/${otherMovie.id}`);
+
+    const list = await agent.get("/api/watchlists");
+    expect(list.body).toEqual([expect.not.objectContaining({ id: movie.id })]);
+    expect(list.body).toEqual([expect.objectContaining({ id: otherMovie.id })]);
+  });
 });
