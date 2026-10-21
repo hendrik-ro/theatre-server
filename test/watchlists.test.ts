@@ -1,15 +1,11 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/server.js";
-import { createMovie, resetMovies } from "../src/db/queries/movies.js";
-import { resetWatchlists } from "../src/db/queries/watchlists.js";
-import { registerInput } from "./helpers.js";
-import { resetUsers } from "../src/db/queries/users.js";
+import { createMovie } from "../src/db/queries/movies.js";
+import { registerInput, resetDB } from "./helpers.js";
 
 beforeEach(async () => {
-  await resetUsers();
-  await resetMovies();
-  await resetWatchlists();
+  await resetDB();
 });
 
 describe("watchlists", () => {

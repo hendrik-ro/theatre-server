@@ -7,7 +7,6 @@ import {
   getAllMovies,
   getMovieById,
   getMoviesMetaData,
-  resetMovies,
   updateMovie,
 } from "../src/db/queries/movies.js";
 import {
@@ -15,18 +14,14 @@ import {
   deleteUser,
   getAllUsers,
   getUserById,
-  resetUsers,
 } from "../src/db/queries/users.js";
 import { firstOrUndefined } from "../src/db/queries/utils.js";
 import { users } from "../src/db/schema/users.sql.js";
 import { movieInputSchema } from "../src/models/movies.js";
+import { resetDB } from "./helpers.js";
 
 beforeEach(async () => {
-  // refresh_tokens must be listed: it references users, and Postgres
-  // refuses to truncate a table still referenced by another.
-  await db.execute(
-    sql`TRUNCATE TABLE watchlists, movies, users, app_bootstrap, refresh_tokens`,
-  );
+  await resetDB();
   // Pre-seed the first-admin claim so createUser in the generic suites
   // below deterministically gets role "user"; the bootstrap describe
   // starts from a fresh claim instead.
@@ -241,18 +236,6 @@ describe("updateMovie", () => {
   });
 });
 
-describe("resetMovies", () => {
-  it("resets the movie table", async () => {
-    await createMovie({ name: "Inception", year: 2010 });
-    await createMovie({ name: "Sicario", year: 2015 });
-    const movies = await getAllMovies();
-    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
-
-    await resetMovies();
-    expect(await getAllMovies()).toEqual([]);
-  });
-});
-
 describe("firstOrUndefined", () => {
   it("returns undefined for an empty array", () => {
     expect(firstOrUndefined([])).toBeUndefined();
@@ -462,17 +445,5 @@ describe("deleteUser", () => {
 
   it("rejects a malformed UUID", async () => {
     await expect(deleteUser("not-a-uuid")).rejects.toThrow("Invalid UUID");
-  });
-});
-
-describe("resetUsers", () => {
-  it("resets the users table", async () => {
-    await createUser("john", "john@example.com", "hash1");
-    await createUser("jane", "jane@example.com", "hash2");
-    const users = await getAllUsers();
-    expect(users.map((u) => u.username).sort()).toEqual(["jane", "john"]);
-
-    await resetUsers();
-    expect(await getAllUsers()).toEqual([]);
   });
 });

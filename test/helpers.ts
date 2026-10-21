@@ -1,6 +1,8 @@
 import request from "supertest";
 import type { Express } from "express";
 import { expect } from "vitest";
+import { getTableName, sql } from "drizzle-orm";
+import { db, schema } from "../src/db/index.js";
 
 // The default user for auth tests; registerUser creates them.
 export const registerInput = {
@@ -28,4 +30,19 @@ export async function registerUser(app: Express): Promise<void> {
     .post("/api/users/register")
     .send(registerInput);
   expect(res.status).toBe(201);
+}
+
+export async function resetDB(): Promise<void> {
+  // Truncates every table registered in the drizzle schema map — the
+  // list is derived, so a new table is picked up automatically. It
+  // includes app_bootstrap: each test then starts from an empty
+  // first-admin claim, which makes the first registration's admin
+  // role deterministic instead of order-dependent.
+  const tables = Object.values(schema);
+  await db.execute(
+    sql`TRUNCATE TABLE ${sql.join(
+      tables.map((t) => sql.identifier(getTableName(t))),
+      sql`, `,
+    )}`,
+  );
 }

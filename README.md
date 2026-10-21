@@ -35,6 +35,9 @@ throughout: `{ "message": string }`.
 | GET    | `/api/watchlists`          | session        | List the current user's watchlist       |
 | POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist            |
 | DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist       |
+| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie       |
+| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)  |
+| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                |
 | GET    | `/api/admin/users`         | admin          | List all users                          |
 | DELETE | `/api/admin/users/:id`     | admin          | Delete a user                           |
 | DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                          |
@@ -111,14 +114,19 @@ generated, reviewable SQL migrations (drizzle-kit) applied with
 primary key, are mapped to `409` responses by the error handler. UUID
 primary keys, and timestamps maintained by the database.
 
+Movie ratings live in their own table keyed by `(user_id, movie_id)` —
+one rating per user and movie, enforced by a composite primary key that
+also backs the re-rating upsert. Ratings are integers constrained to
+`0-10` by both a Zod schema and a database CHECK.
+
 ## Testing
 
-Over 100 integration and unit tests (Vitest + supertest) run against a
+Over 130 integration and unit tests (Vitest + supertest) run against a
 real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on
-movies and users, per-user watchlist isolation, the first-admin
-bootstrap race, and error-handler mapping. A shared global setup creates and migrates the test database
+movies and users, per-user watchlist and rating isolation, rating
+validation, the first-admin bootstrap race, and error-handler mapping. A shared global setup creates and migrates the test database
 once per run instead of once per file.
 
 ## Tech Stack
@@ -240,8 +248,8 @@ All commands are run from the repository root.
 
 - **Deployment** — deployment of app plus database as containers on a
   single VPS
-- **User ratings** — rate movies yourself; every user's rating feeds a
-  shared user average shown alongside the IMDb rating
+- **Rating averages** — every user's rating feeds a shared user average
+  shown alongside the IMDb rating
 - **Watched status** — mark movies as watched and track what is still
   pending
 

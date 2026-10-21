@@ -1,7 +1,7 @@
 import { eq, count, asc, desc } from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
-import { assertUUID, firstOrUndefined, isDevOrTest, isUUID } from "./utils.js";
+import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
 import { Movie, MovieInput, MoviesMeta } from "../../models/movies.js";
 
 export async function createMovie(input: MovieInput): Promise<Movie> {
@@ -36,11 +36,6 @@ export async function updateMovie(
     .where(eq(movies.id, id))
     .returning();
   return result;
-}
-
-export async function resetMovies(): Promise<void> {
-  if (!isDevOrTest()) return;
-  await db.delete(movies);
 }
 
 export async function getMoviesMetaData(): Promise<MoviesMeta> {

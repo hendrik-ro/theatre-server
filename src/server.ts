@@ -9,6 +9,7 @@ import adminRouter from "./routes/admin.js";
 import movieRouter from "./routes/movies.js";
 import userRouter from "./routes/users.js";
 import watchlistsRouter from "./routes/watchlists.js";
+import movieRatingsRouter from "./routes/movieRatings.js";
 
 const app = express();
 const port = config.serverPort;
@@ -23,6 +24,7 @@ app.use("/api/movies", movieRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/watchlists", watchlistsRouter);
+app.use("/api/ratings", movieRatingsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

@@ -1,11 +1,6 @@
-import type { Request } from "express";
 import { hashPassword, hashToken, verifyPassword } from "../auth/hash.js";
 import type { AsyncRequestHandler } from "../utils/asyncHandler.js";
-import {
-  userLoginSchema,
-  userRegistrationSchema,
-  type User,
-} from "../models/users.js";
+import { userLoginSchema, userRegistrationSchema } from "../models/users.js";
 import {
   createUser,
   getUserById,
@@ -24,17 +19,7 @@ import {
   revokeRefreshToken,
 } from "../db/queries/refreshTokens.js";
 import { HttpError } from "../utils/errors.js";
-
-// Unreachable in a correctly wired app: the routes below all run behind
-// requireAuth, which guarantees req.user. Guards the optional typing
-// instead of asserting it away.
-function requireUser(req: Request): User {
-  const user = req.user;
-  if (!user) {
-    throw new Error("requireAuth middleware not mounted");
-  }
-  return user;
-}
+import { requireUser } from "./helpers.js";
 
 export const usersRegister: AsyncRequestHandler = async (req, res) => {
   const input = userRegistrationSchema.parse(req.body);

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../index.js";
 import { watchlists } from "../schema/watchlists.sql.js";
-import { assertUUID, isDevOrTest } from "./utils.js";
+import { assertUUID } from "./utils.js";
 import { Movie } from "../../models/movies.js";
 import { movies } from "../schema/movies.sql.js";
 
@@ -43,9 +43,4 @@ export async function getWatchlist(userId: string): Promise<Movie[]> {
   return result.map((m) => {
     return m.movies;
   });
-}
-
-export async function resetWatchlists(): Promise<void> {
-  if (!isDevOrTest()) return;
-  await db.delete(watchlists);
 }

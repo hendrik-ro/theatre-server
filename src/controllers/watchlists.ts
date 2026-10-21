@@ -1,18 +1,11 @@
-import { Request } from "express";
 import {
   addMovie,
   getWatchlist,
   removeMovie,
 } from "../db/queries/watchlists.js";
 import { AsyncRequestHandler } from "../utils/asyncHandler.js";
-import { User } from "../models/users.js";
 import { getMovieById } from "../db/queries/movies.js";
-
-function requireUser(req: Request): User {
-  const user = req.user;
-  if (!user) throw new Error("requireAuth middleware not mounted");
-  return user;
-}
+import { requireUser } from "./helpers.js";
 
 export const watchlistsAddMovie: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);

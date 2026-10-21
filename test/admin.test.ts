@@ -1,12 +1,9 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/server.js";
-import {
-  changeRole,
-  getUserByEmail,
-  resetUsers,
-} from "../src/db/queries/users.js";
-import { createMovie, resetMovies } from "../src/db/queries/movies.js";
+import { changeRole, getUserByEmail } from "../src/db/queries/users.js";
+import { createMovie } from "../src/db/queries/movies.js";
+import { resetDB } from "./helpers.js";
 
 const adminInput = {
   username: "theatreboss",
@@ -44,8 +41,7 @@ async function registerAndLogin(
 
 describe("admin routes", () => {
   beforeEach(async () => {
-    await resetUsers();
-    await resetMovies();
+    await resetDB();
   });
 
   it("GET /api/admin/users without authentication returns 401", async () => {
@@ -152,8 +148,7 @@ describe("admin routes", () => {
 
 describe("self-service deletion", () => {
   beforeEach(async () => {
-    await resetUsers();
-    await resetMovies();
+    await resetDB();
   });
 
   it("DELETE /api/users/:id lets a non-admin delete their own account", async () => {
