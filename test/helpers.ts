@@ -1,6 +1,10 @@
 import request from "supertest";
 import type { Express } from "express";
 import { expect } from "vitest";
+import { resetUsers } from "../src/db/queries/users";
+import { resetMovies } from "../src/db/queries/movies";
+import { resetWatchlists } from "../src/db/queries/watchlists";
+import { resetMovieRatings } from "../src/db/queries/movieRatings.sql";
 
 // The default user for auth tests; registerUser creates them.
 export const registerInput = {
@@ -28,4 +32,11 @@ export async function registerUser(app: Express): Promise<void> {
     .post("/api/users/register")
     .send(registerInput);
   expect(res.status).toBe(201);
+}
+
+export async function resetDB(): Promise<void> {
+  await resetUsers();
+  await resetMovies();
+  await resetWatchlists();
+  await resetMovieRatings();
 }

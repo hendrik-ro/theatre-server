@@ -1,9 +1,8 @@
 # [1.3.0](https://github.com/hendrik-ro/theatre-server/compare/v1.2.1...v1.3.0) (2026-10-20)
 
-
 ### Features
 
-* watchlists ([#5](https://github.com/hendrik-ro/theatre-server/issues/5)) ([1260af1](https://github.com/hendrik-ro/theatre-server/commit/1260af1604e497bd7a75a3fe35f7de802ea34cb6))
+- watchlists ([#5](https://github.com/hendrik-ro/theatre-server/issues/5)) ([1260af1](https://github.com/hendrik-ro/theatre-server/commit/1260af1604e497bd7a75a3fe35f7de802ea34cb6))
 
 ## [1.2.1](https://github.com/hendrik-ro/theatre-server/compare/v1.2.0...v1.2.1) (2026-10-19)
 

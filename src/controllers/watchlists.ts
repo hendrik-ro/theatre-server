@@ -7,7 +7,6 @@ import { AsyncRequestHandler } from "../utils/asyncHandler.js";
 import { getMovieById } from "../db/queries/movies.js";
 import { requireUser } from "./helpers.js";
 
-
 export const watchlistsAddMovie: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
   const movie = await getMovieById(req.params.movieId);

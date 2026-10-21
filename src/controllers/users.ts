@@ -1,9 +1,6 @@
 import { hashPassword, hashToken, verifyPassword } from "../auth/hash.js";
 import type { AsyncRequestHandler } from "../utils/asyncHandler.js";
-import {
-  userLoginSchema,
-  userRegistrationSchema,
-} from "../models/users.js";
+import { userLoginSchema, userRegistrationSchema } from "../models/users.js";
 import {
   createUser,
   getUserById,
