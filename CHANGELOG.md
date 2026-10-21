@@ -1,3 +1,16 @@
+# [1.4.0](https://github.com/hendrik-ro/theatre-server/compare/v1.3.0...v1.4.0) (2026-10-21)
+
+
+### Bug Fixes
+
+* harden movie ratings and test reset ([d57b5d3](https://github.com/hendrik-ro/theatre-server/commit/d57b5d337dfe492fc25bb7c97a41b6e61b6ed9ff))
+
+
+### Features
+
+* movie ratings ([1c14413](https://github.com/hendrik-ro/theatre-server/commit/1c144135fa2a1b55a3f66b3153dbe49af68f196f))
+* movie ratings ([#6](https://github.com/hendrik-ro/theatre-server/issues/6)) ([8e612cc](https://github.com/hendrik-ro/theatre-server/commit/8e612cc2d3f7732f4178b43f10dfd10b086bafc1))
+
 # [1.3.0](https://github.com/hendrik-ro/theatre-server/compare/v1.2.1...v1.3.0) (2026-10-20)
 
 ### Features
