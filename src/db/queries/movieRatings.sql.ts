@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { UserMovieRating } from "../../models/ratings.js";
 import { db } from "../index.js";
 import { movieRatings } from "../schema/movieRatings.js";
-import { assertUUID, firstOrUndefined, isDevOrTest } from "./utils.js";
+import { assertUUID, firstOrUndefined } from "./utils.js";
 import { HttpError } from "../../utils/errors.js";
 
 export async function rateMovie(
@@ -51,9 +51,4 @@ export async function unrateMovie(
     .where(
       and(eq(movieRatings.userId, userId), eq(movieRatings.movieId, movieId)),
     );
-}
-
-export async function resetMovieRatings(): Promise<void> {
-  if (!isDevOrTest()) return;
-  await db.delete(movieRatings);
 }

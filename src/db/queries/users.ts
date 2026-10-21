@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "../index.js";
 import { users } from "../schema/users.sql.js";
-import { assertUUID, firstOrUndefined, isDevOrTest } from "./utils.js";
+import { assertUUID, firstOrUndefined } from "./utils.js";
 import { User } from "../../models/users.js";
-import { appBootstrap } from "../schema/appBootstrap.sql.js";
 import { firstAdmin } from "./bootstrap.js";
 
 export async function getAllUsers(): Promise<User[]> {
@@ -67,12 +66,6 @@ export async function setLastLogin(id: string): Promise<void> {
     .update(users)
     .set({ lastLoginAt: new Date() })
     .where(eq(users.id, id));
-}
-
-export async function resetUsers(): Promise<void> {
-  if (!isDevOrTest()) return;
-  await db.delete(users);
-  await db.delete(appBootstrap);
 }
 
 export async function changeRole(

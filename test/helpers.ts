@@ -33,6 +33,11 @@ export async function registerUser(app: Express): Promise<void> {
 }
 
 export async function resetDB(): Promise<void> {
+  // Truncates every table registered in the drizzle schema map — the
+  // list is derived, so a new table is picked up automatically. It
+  // includes app_bootstrap: each test then starts from an empty
+  // first-admin claim, which makes the first registration's admin
+  // role deterministic instead of order-dependent.
   const tables = Object.values(schema);
   await db.execute(
     sql`TRUNCATE TABLE ${sql.join(
