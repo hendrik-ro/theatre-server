@@ -9,12 +9,12 @@ export async function rateMovie(
   userId: string,
   movieId: string,
   rating: number,
-): Promise<UserMovieRating | undefined> {
+): Promise<UserMovieRating> {
   assertUUID(userId);
   assertUUID(movieId);
   if (!Number.isInteger(rating) || rating < 0 || rating > 10)
     throw new HttpError(400, "Invalid rating");
-  const newRating = await db
+  const [newRating] = await db
     .insert(movieRatings)
     .values({ userId, movieId, rating })
     .onConflictDoUpdate({
@@ -22,7 +22,7 @@ export async function rateMovie(
       set: { rating },
     })
     .returning();
-  return firstOrUndefined(newRating);
+  return newRating;
 }
 
 export async function getMovieRating(
@@ -43,19 +43,14 @@ export async function getMovieRating(
 export async function unrateMovie(
   userId: string,
   movieId: string,
-): Promise<boolean> {
+): Promise<void> {
   assertUUID(userId);
   assertUUID(movieId);
-  const [deletedRating] = await db
+  await db
     .delete(movieRatings)
     .where(
       and(eq(movieRatings.userId, userId), eq(movieRatings.movieId, movieId)),
-    )
-    .returning({
-      movieId: movieRatings.movieId,
-      userId: movieRatings.userId,
-    });
-  return deletedRating !== undefined;
+    );
 }
 
 export async function resetMovieRatings(): Promise<void> {

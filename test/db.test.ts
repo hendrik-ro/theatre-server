@@ -20,13 +20,10 @@ import {
 import { firstOrUndefined } from "../src/db/queries/utils.js";
 import { users } from "../src/db/schema/users.sql.js";
 import { movieInputSchema } from "../src/models/movies.js";
+import { resetDB } from "./helpers.js";
 
 beforeEach(async () => {
-  // refresh_tokens must be listed: it references users, and Postgres
-  // refuses to truncate a table still referenced by another.
-  await db.execute(
-    sql`TRUNCATE TABLE movie_ratings, watchlists, movies, users, app_bootstrap, refresh_tokens`,
-  );
+  await resetDB();
   // Pre-seed the first-admin claim so createUser in the generic suites
   // below deterministically gets role "user"; the bootstrap describe
   // starts from a fresh claim instead.

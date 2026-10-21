@@ -11,11 +11,11 @@ import { assertUUID } from "../db/queries/utils.js";
 
 export const movieRatingsRate: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
+  assertUUID(req.params.movieId);
   const movie = await getMovieById(req.params.movieId);
-  if (!movie) return res.sendStatus(400);
+  if (!movie) return res.sendStatus(404);
   const { rating } = movieRatingSchema.parse(req.body);
   const ratedMovie = await rateMovie(user.id, movie.id, rating);
-  if (!ratedMovie) return res.sendStatus(400);
   res.status(201).json(ratedMovie);
 };
 

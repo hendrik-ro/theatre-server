@@ -1,10 +1,8 @@
 import request from "supertest";
 import type { Express } from "express";
 import { expect } from "vitest";
-import { resetUsers } from "../src/db/queries/users";
-import { resetMovies } from "../src/db/queries/movies";
-import { resetWatchlists } from "../src/db/queries/watchlists";
-import { resetMovieRatings } from "../src/db/queries/movieRatings.sql";
+import { getTableName, sql } from "drizzle-orm";
+import { db, schema } from "../src/db/index.js";
 
 // The default user for auth tests; registerUser creates them.
 export const registerInput = {
@@ -35,8 +33,11 @@ export async function registerUser(app: Express): Promise<void> {
 }
 
 export async function resetDB(): Promise<void> {
-  await resetUsers();
-  await resetMovies();
-  await resetWatchlists();
-  await resetMovieRatings();
+  const tables = Object.values(schema);
+  await db.execute(
+    sql`TRUNCATE TABLE ${sql.join(
+      tables.map((t) => sql.identifier(getTableName(t))),
+      sql`, `,
+    )}`,
+  );
 }

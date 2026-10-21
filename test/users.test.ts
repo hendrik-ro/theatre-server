@@ -4,17 +4,18 @@ import { eq } from "drizzle-orm";
 import { app } from "../src/server.js";
 import { db } from "../src/db/index.js";
 import { refreshTokens } from "../src/db/schema/refreshTokens.sql.js";
-import {
-  deleteUser,
-  getUserByEmail,
-  resetUsers,
-} from "../src/db/queries/users.js";
+import { deleteUser, getUserByEmail } from "../src/db/queries/users.js";
 import { hashToken } from "../src/auth/hash.js";
-import { cookieValue, registerInput, registerUser } from "./helpers.js";
+import {
+  cookieValue,
+  registerInput,
+  registerUser,
+  resetDB,
+} from "./helpers.js";
 
 describe("users", () => {
   beforeEach(async () => {
-    await resetUsers();
+    await resetDB();
   });
 
   it("register creates a user", async () => {
