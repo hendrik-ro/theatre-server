@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/hendrik-ro/theatre-server/compare/v1.4.0...v1.5.0) (2026-10-22)
+
+
+### Bug Fixes
+
+* endpoint fetch all user movie ratings ([402a132](https://github.com/hendrik-ro/theatre-server/commit/402a13220ebce5835db284004aef18d0c8fc835e))
+
+
+### Features
+
+* **ratings:** add GET /api/ratings endpoint ([7c175ef](https://github.com/hendrik-ro/theatre-server/commit/7c175ef18964d55053c48125526481cf900c7352))
+
 # [1.4.0](https://github.com/hendrik-ro/theatre-server/compare/v1.3.0...v1.4.0) (2026-10-21)
 
 ### Bug Fixes
