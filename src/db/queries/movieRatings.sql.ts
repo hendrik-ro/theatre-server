@@ -47,7 +47,8 @@ export async function getAllRatings(
   const ratings = await db
     .select()
     .from(movieRatings)
-    .where(eq(movieRatings.userId, userId));
+    .where(eq(movieRatings.userId, userId))
+    .orderBy(movieRatings.movieId);
   return ratings;
 }
 
