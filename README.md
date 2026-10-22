@@ -19,29 +19,30 @@ repository; the backend is the focus of this project.
 REST endpoints, versioned through semantic-release and JSON errors
 throughout: `{ "message": string }`.
 
-| Method | Route                      | Auth           | Description                             |
-| ------ | -------------------------- | -------------- | --------------------------------------- |
-| POST   | `/api/users/register`      | —              | Create an account and log in            |
-| POST   | `/api/users/login`         | —              | Log in                                  |
-| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies |
-| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                   |
-| GET    | `/api/users/me`            | session        | Current user profile                    |
-| DELETE | `/api/users/:id`           | self/admin     | Delete an account                       |
-| GET    | `/api/movies`              | —              | List all movies                         |
-| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre         |
-| GET    | `/api/movies/:id`          | —              | Fetch one movie                         |
-| POST   | `/api/movies`              | session        | Create a movie                          |
-| PUT    | `/api/movies/:id`          | session        | Update a movie                          |
-| GET    | `/api/watchlists`          | session        | List the current user's watchlist       |
-| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist            |
-| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist       |
-| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie       |
-| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)  |
-| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                |
-| GET    | `/api/admin/users`         | admin          | List all users                          |
-| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                           |
-| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                          |
-| GET    | `/api/health`              | —              | Liveness check                          |
+| Method | Route                      | Auth           | Description                                               |
+| ------ | -------------------------- | -------------- | --------------------------------------------------------- |
+| POST   | `/api/users/register`      | —              | Create an account and log in                              |
+| POST   | `/api/users/login`         | —              | Log in                                                    |
+| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies                   |
+| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                     |
+| GET    | `/api/users/me`            | session        | Current user profile                                      |
+| DELETE | `/api/users/:id`           | self/admin     | Delete an account                                         |
+| GET    | `/api/movies`              | —              | List all movies                                           |
+| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                           |
+| GET    | `/api/movies/:id`          | —              | Fetch one movie                                           |
+| POST   | `/api/movies`              | session        | Create a movie                                            |
+| PUT    | `/api/movies/:id`          | session        | Update a movie                                            |
+| GET    | `/api/watchlists`          | session        | List the current user's watchlist                         |
+| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist                              |
+| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist                         |
+| GET    | `/api/ratings`             | session        | List all ratings for the current user (sorted by movieId) |
+| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie                         |
+| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)                    |
+| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                                  |
+| GET    | `/api/admin/users`         | admin          | List all users                                            |
+| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                                             |
+| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                                            |
+| GET    | `/api/health`              | —              | Liveness check                                            |
 
 Here "session" in the Auth column means a valid JWT access-token cookie
 (`theatre.jwt`) issued by registration, login, or refresh — the API
@@ -117,11 +118,13 @@ primary keys, and timestamps maintained by the database.
 Movie ratings live in their own table keyed by `(user_id, movie_id)` —
 one rating per user and movie, enforced by a composite primary key that
 also backs the re-rating upsert. Ratings are integers constrained to
-`0-10` by both a Zod schema and a database CHECK.
+`0-10` by both a Zod schema and a database CHECK. The `GET /api/ratings`
+endpoint returns all ratings for the authenticated user, ordered by
+`movieId` for efficient client-side injection into movie tables.
 
 ## Testing
 
-Over 130 integration and unit tests (Vitest + supertest) run against a
+Over 140 integration and unit tests (Vitest + supertest) run against a
 real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on
