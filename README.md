@@ -27,9 +27,9 @@ throughout: `{ "message": string }`.
 | POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                     |
 | GET    | `/api/users/me`            | session        | Current user profile                                      |
 | DELETE | `/api/users/:id`           | self/admin     | Delete an account                                         |
-| GET    | `/api/movies`              | —              | List all movies                                           |
+| GET    | `/api/movies`              | —              | List all movies with community rating averages            |
 | GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                           |
-| GET    | `/api/movies/:id`          | —              | Fetch one movie                                           |
+| GET    | `/api/movies/:id`          | —              | Fetch one movie with community rating averages            |
 | POST   | `/api/movies`              | session        | Create a movie                                            |
 | PUT    | `/api/movies/:id`          | session        | Update a movie                                            |
 | GET    | `/api/watchlists`          | session        | List the current user's watchlist                         |
@@ -47,6 +47,13 @@ throughout: `{ "message": string }`.
 Here "session" in the Auth column means a valid JWT access-token cookie
 (`theatre.jwt`) issued by registration, login, or refresh — the API
 keeps no server-side session state.
+
+Movie list and detail responses include two community rating fields:
+`averageRating` — the mean of all users' ratings for the movie, rounded
+to one decimal (e.g. `8.7`), or `null` when nobody has rated it yet — and
+`ratingCount`, the number of ratings behind that average. Averages are
+computed on read from the ratings table, so they are always current and
+never stored.
 
 ## Architecture
 
@@ -120,7 +127,10 @@ one rating per user and movie, enforced by a composite primary key that
 also backs the re-rating upsert. Ratings are integers constrained to
 `0-10` by both a Zod schema and a database CHECK. The `GET /api/ratings`
 endpoint returns all ratings for the authenticated user, ordered by
-`movieId` for efficient client-side injection into movie tables.
+`movieId` for efficient client-side injection into movie tables. The
+community averages in the movie list and detail responses are computed
+on read — `ROUND(AVG(rating), 1)` grouped per movie and joined into the
+movie queries — rather than denormalized into storage.
 
 ## Testing
 
@@ -251,10 +261,6 @@ All commands are run from the repository root.
 
 - **Deployment** — deployment of app plus database as containers on a
   single VPS
-- **Rating averages** — every user's rating feeds a shared user average
-  shown alongside the IMDb rating
-- **Watched status** — mark movies as watched and track what is still
-  pending
 
 ## Contributing
 
