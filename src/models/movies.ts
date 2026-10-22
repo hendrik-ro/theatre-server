@@ -11,6 +11,8 @@ export interface Movie {
   createdAt: Date;
   updatedAt: Date;
   id: string;
+  averageRating?: string | null;
+  ratingCount?: number;
 }
 
 export interface MoviesMeta {

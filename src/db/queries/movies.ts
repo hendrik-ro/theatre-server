@@ -1,8 +1,9 @@
-import { eq, count, asc, desc } from "drizzle-orm";
+import { eq, count, asc, desc, getTableColumns, sql } from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
 import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
 import { Movie, MovieInput, MoviesMeta } from "../../models/movies.js";
+import { movieRatings } from "../schema/movieRatings.js";
 
 export async function createMovie(input: MovieInput): Promise<Movie> {
   const [result] = await db.insert(movies).values(input).returning();
@@ -10,7 +11,23 @@ export async function createMovie(input: MovieInput): Promise<Movie> {
 }
 
 export async function getAllMovies(): Promise<Movie[]> {
-  const result = await db.select().from(movies);
+  const averages = db
+    .select({
+      movieId: movieRatings.movieId,
+      average: sql<string>`ROUND(AVG(${movieRatings.rating}), 1)`.as("average"),
+      count: count().as("count"),
+    })
+    .from(movieRatings)
+    .groupBy(movieRatings.movieId)
+    .as("avg_rating");
+  const result = await db
+    .select({
+      ...getTableColumns(movies),
+      averageRating: averages.average,
+      ratingCount: averages.count,
+    })
+    .from(movies)
+    .leftJoin(averages, eq(averages.movieId, movies.id));
   return result;
 }
 
