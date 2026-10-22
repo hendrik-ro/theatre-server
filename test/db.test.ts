@@ -9,6 +9,7 @@ import {
   getMoviesMetaData,
   updateMovie,
 } from "../src/db/queries/movies.js";
+import { rateMovie } from "../src/db/queries/movieRatings.sql.js";
 import {
   createUser,
   deleteUser,
@@ -132,6 +133,39 @@ describe("getAllMovies", () => {
     const movies = await getAllMovies();
     expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
   });
+
+  it("returns the community average rounded to one decimal", async () => {
+    const alice = await createUser("alice", "alice@example.com", "hash1");
+    const bob = await createUser("bob", "bob@example.com", "hash2");
+    const carol = await createUser("carol", "carol@example.com", "hash3");
+    const inception = await createMovie({ name: "Inception", year: 2010 });
+
+    // (9 + 9 + 8) / 3 = 8.666… — exercises the SQL ROUND, not just a
+    // value that happens to have one decimal.
+    await rateMovie(alice.id, inception.id, 9);
+    await rateMovie(bob.id, inception.id, 9);
+    await rateMovie(carol.id, inception.id, 8);
+
+    const rated = (await getAllMovies()).find((m) => m.name === "Inception");
+    expect(rated?.averageRating).toBe(8.7);
+    expect(rated?.ratingCount).toBe(3);
+    // pg returns numeric as a string; the query layer must convert it.
+    expect(typeof rated?.averageRating).toBe("number");
+  });
+
+  it("keeps unrated movies in the list with a null average", async () => {
+    const alice = await createUser("alice", "alice@example.com", "hash1");
+    const inception = await createMovie({ name: "Inception", year: 2010 });
+    await createMovie({ name: "Sicario", year: 2015 });
+
+    await rateMovie(alice.id, inception.id, 7);
+
+    const movies = await getAllMovies();
+    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
+    const unrated = movies.find((m) => m.name === "Sicario");
+    expect(unrated?.averageRating).toBeNull();
+    expect(unrated?.ratingCount).toBe(0);
+  });
 });
 
 describe("getMovieById", () => {
@@ -150,6 +184,35 @@ describe("getMovieById", () => {
 
   it("returns undefined for an unknown id", async () => {
     expect(await getMovieById("Nope")).toBeUndefined();
+  });
+
+  it("returns the community average for a rated movie", async () => {
+    const alice = await createUser("alice", "alice@example.com", "hash1");
+    const bob = await createUser("bob", "bob@example.com", "hash2");
+    const carol = await createUser("carol", "carol@example.com", "hash3");
+    const inception = await createMovie({ name: "Inception", year: 2010 });
+
+    await rateMovie(alice.id, inception.id, 9);
+    await rateMovie(bob.id, inception.id, 9);
+    await rateMovie(carol.id, inception.id, 8);
+
+    const found = await getMovieById(inception.id);
+    expect(found?.averageRating).toBe(8.7);
+    expect(found?.ratingCount).toBe(3);
+    expect(typeof found?.averageRating).toBe("number");
+  });
+
+  it("returns a whole-number average as a number, not a string", async () => {
+    const alice = await createUser("alice", "alice@example.com", "hash1");
+    const inception = await createMovie({ name: "Inception", year: 2010 });
+
+    // ROUND(AVG(8), 1) comes back from pg as "8.0": without the
+    // string-to-number conversion this would fail on "8.0" !== 8.
+    await rateMovie(alice.id, inception.id, 8);
+
+    const found = await getMovieById(inception.id);
+    expect(found?.averageRating).toBe(8);
+    expect(typeof found?.averageRating).toBe("number");
   });
 });
 
