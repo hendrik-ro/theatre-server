@@ -19,7 +19,23 @@ import {
 import { firstOrUndefined } from "../src/db/queries/utils.js";
 import { users } from "../src/db/schema/users.sql.js";
 import { movieInputSchema } from "../src/models/movies.js";
-import { resetDB } from "./helpers.js";
+import { createTestMovie, resetDB } from "./helpers.js";
+
+// Runs a promise expected to reject with a Postgres error (possibly
+// wrapped in a cause) and returns the SQLSTATE code it failed with.
+async function pgErrorCode(
+  promise: Promise<unknown>,
+): Promise<string | undefined> {
+  try {
+    await promise;
+    return undefined;
+  } catch (err) {
+    return (
+      (err as { code?: string })?.code ??
+      (err as { cause?: { code?: string } })?.cause?.code
+    );
+  }
+}
 
 beforeEach(async () => {
   await resetDB();
@@ -68,15 +84,7 @@ describe("createMovie", () => {
   it("rejects a duplicate name (unique constraint)", async () => {
     await createMovie({ name: "Inception" });
 
-    const err = await createMovie({ name: "Inception" }).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23505");
+    expect(await pgErrorCode(createMovie({ name: "Inception" }))).toBe("23505");
   });
 
   it("rejects a year outside the allowed range (zod validation)", async () => {
@@ -127,8 +135,8 @@ describe("getAllMovies", () => {
   });
 
   it("returns all inserted movies", async () => {
-    await createMovie({ name: "Inception", year: 2010 });
-    await createMovie({ name: "Sicario", year: 2015 });
+    await createTestMovie();
+    await createTestMovie({ name: "Sicario", year: 2015 });
 
     const movies = await getAllMovies();
     expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
@@ -138,7 +146,7 @@ describe("getAllMovies", () => {
     const alice = await createUser("alice", "alice@example.com", "hash1");
     const bob = await createUser("bob", "bob@example.com", "hash2");
     const carol = await createUser("carol", "carol@example.com", "hash3");
-    const inception = await createMovie({ name: "Inception", year: 2010 });
+    const inception = await createTestMovie();
 
     // (9 + 9 + 8) / 3 = 8.666… — exercises the SQL ROUND, not just a
     // value that happens to have one decimal.
@@ -155,8 +163,8 @@ describe("getAllMovies", () => {
 
   it("keeps unrated movies in the list with a null average", async () => {
     const alice = await createUser("alice", "alice@example.com", "hash1");
-    const inception = await createMovie({ name: "Inception", year: 2010 });
-    await createMovie({ name: "Sicario", year: 2015 });
+    const inception = await createTestMovie();
+    await createTestMovie({ name: "Sicario", year: 2015 });
 
     await rateMovie(alice.id, inception.id, 7);
 
@@ -170,7 +178,7 @@ describe("getAllMovies", () => {
 
 describe("getMovieById", () => {
   it("finds a movie by id", async () => {
-    const created = await createMovie({ name: "Inception", year: 2010 });
+    const created = await createTestMovie();
 
     const found = await getMovieById(created.id);
     expect(found).toMatchObject({
@@ -190,7 +198,7 @@ describe("getMovieById", () => {
     const alice = await createUser("alice", "alice@example.com", "hash1");
     const bob = await createUser("bob", "bob@example.com", "hash2");
     const carol = await createUser("carol", "carol@example.com", "hash3");
-    const inception = await createMovie({ name: "Inception", year: 2010 });
+    const inception = await createTestMovie();
 
     await rateMovie(alice.id, inception.id, 9);
     await rateMovie(bob.id, inception.id, 9);
@@ -204,7 +212,7 @@ describe("getMovieById", () => {
 
   it("returns a whole-number average as a number, not a string", async () => {
     const alice = await createUser("alice", "alice@example.com", "hash1");
-    const inception = await createMovie({ name: "Inception", year: 2010 });
+    const inception = await createTestMovie();
 
     // ROUND(AVG(8), 1) comes back from pg as "8.0": without the
     // string-to-number conversion this would fail on "8.0" !== 8.
@@ -218,15 +226,15 @@ describe("getMovieById", () => {
 
 describe("deleteMovie", () => {
   it("deletes a movie by UUID", async () => {
-    const created = await createMovie({ name: "Inception", year: 2010 });
+    const created = await createTestMovie();
     await deleteMovie(created.id);
 
     expect(await getMovieById(created.id)).toBeUndefined();
   });
 
   it("leaves other movies untouched", async () => {
-    const inception = await createMovie({ name: "Inception", year: 2010 });
-    await createMovie({ name: "Sicario", year: 2015 });
+    const inception = await createTestMovie();
+    await createTestMovie({ name: "Sicario", year: 2015 });
 
     await deleteMovie(inception.id);
 
@@ -235,7 +243,7 @@ describe("deleteMovie", () => {
   });
 
   it("is a no-op for an unknown UUID", async () => {
-    await createMovie({ name: "Inception", year: 2010 });
+    await createTestMovie();
 
     await deleteMovie("00000000-0000-0000-0000-000000000000");
 
@@ -249,7 +257,7 @@ describe("deleteMovie", () => {
 
 describe("updateMovie", () => {
   it("updates a movie and returns the updated row", async () => {
-    const movie = await createMovie({ name: "Inception", year: 2010 });
+    const movie = await createTestMovie();
     const updatedMovie = await updateMovie(movie.id, {
       name: movie.name,
       year: 2011,
@@ -273,7 +281,7 @@ describe("updateMovie", () => {
   });
 
   it("returns undefined when no movie matches the id", async () => {
-    const movie = await createMovie({ name: "Inception", year: 2010 });
+    const movie = await createTestMovie();
 
     const updated = await updateMovie("00000000-0000-0000-0000-000000000000", {
       name: "Nope",
@@ -387,29 +395,17 @@ describe("createUser", () => {
   it("rejects duplicate name (unique constraint)", async () => {
     await createUser("john", "john@example.com", "hashed_password");
 
-    const err = await createUser("john", "another@example.com", "hash2").then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23505");
+    expect(
+      await pgErrorCode(createUser("john", "another@example.com", "hash2")),
+    ).toBe("23505");
   });
 
   it("rejects duplicate email (unique constraint)", async () => {
     await createUser("john", "shared@example.com", "hashed_password");
 
-    const err = await createUser("jane", "shared@example.com", "hash2").then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23505");
+    expect(
+      await pgErrorCode(createUser("jane", "shared@example.com", "hash2")),
+    ).toBe("23505");
   });
 });
 
@@ -440,15 +436,9 @@ describe("bootstrap", () => {
       role: "user",
     });
 
-    const err = await createUser("john", "another@example.com", "hash2").then(
-      () => null,
-      (e: unknown) => e,
-    );
-    const code =
-      (err as { code?: string })?.code ??
-      (err as { cause?: { code?: string } })?.cause?.code ??
-      undefined;
-    expect(code).toBe("23505");
+    expect(
+      await pgErrorCode(createUser("john", "another@example.com", "hash2")),
+    ).toBe("23505");
 
     const retry = await createUser("jane", "jane@example.com", "hash3");
     expect(retry.role).toBe("admin");
