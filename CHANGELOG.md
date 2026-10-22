@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/hendrik-ro/theatre-server/compare/v1.5.0...v1.6.0) (2026-10-22)
+
+
+### Features
+
+* **ratings:** added average ratings to GET /api/movies/ ([0ddbaa1](https://github.com/hendrik-ro/theatre-server/commit/0ddbaa1608923583c3f64d63dab7503cccb9d913))
+
 # [1.5.0](https://github.com/hendrik-ro/theatre-server/compare/v1.4.0...v1.5.0) (2026-10-22)
 
 ### Bug Fixes
