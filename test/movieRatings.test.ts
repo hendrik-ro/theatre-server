@@ -208,4 +208,31 @@ describe("movieRatings", () => {
     expect(bobGetAfterDelete.status).toBe(200);
     expect(bobGetAfterDelete.body.rating).toBe(5);
   });
+
+  it("Gett '/api/ratings' returns all ratings for logged in user", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/users/register").send(registerInput);
+    const movie = await addTestMovie();
+    const movie2 = await createMovie({ name: "Inception" });
+    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+
+    const noRatings = await agent.get("/api/ratings/");
+    expect(noRatings.body).toHaveLength(0);
+
+    const rating = await agent
+      .post(`/api/ratings/${movie.id}`)
+      .send({ rating: 9 });
+    expect(rating.status).toBe(201);
+    const rating2 = await agent
+      .post(`/api/ratings/${movie2.id}`)
+      .send({ rating: 8 });
+    expect(rating2.status).toBe(201);
+    const rating3 = await agent
+      .post(`/api/ratings/${movie3.id}`)
+      .send({ rating: 7 });
+    expect(rating3.status).toBe(201);
+
+    const allRatings = await agent.get("/api/ratings/");
+    expect(allRatings.body).toHaveLength(3);
+  });
 });

@@ -3,7 +3,8 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   movieRatingsDelete,
-  movieRatingsGet,
+  movieRatingsGetAll,
+  movieRatingsGetRating,
   movieRatingsRate,
 } from "../controllers/movieRatings.js";
 
@@ -11,7 +12,8 @@ const movieRatingsRouter = Router();
 
 movieRatingsRouter.use(requireAuth);
 
-movieRatingsRouter.get("/:movieId", asyncHandler(movieRatingsGet));
+movieRatingsRouter.get("/", asyncHandler(movieRatingsGetAll));
+movieRatingsRouter.get("/:movieId", asyncHandler(movieRatingsGetRating));
 movieRatingsRouter.post("/:movieId", asyncHandler(movieRatingsRate));
 movieRatingsRouter.delete("/:movieId", asyncHandler(movieRatingsDelete));
 

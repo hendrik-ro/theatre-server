@@ -40,6 +40,17 @@ export async function getMovieRating(
   return firstOrUndefined(rating);
 }
 
+export async function getAllRatings(
+  userId: string,
+): Promise<UserMovieRating[]> {
+  assertUUID(userId);
+  const ratings = await db
+    .select()
+    .from(movieRatings)
+    .where(eq(movieRatings.userId, userId));
+  return ratings;
+}
+
 export async function unrateMovie(
   userId: string,
   movieId: string,
