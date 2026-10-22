@@ -1,20 +1,21 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { registerInput, resetDB } from "./helpers.js";
+import {
+  authenticatedAgent,
+  createTestMovie,
+  registerInput,
+  resetDB,
+} from "./helpers.js";
 import { app } from "../src/server.js";
-import { createMovie } from "../src/db/queries/movies.js";
 import { getUserByUsername } from "../src/db/queries/users.js";
 import { UserMovieRating } from "../src/models/ratings.js";
 
-async function addTestMovie() {
-  return await createMovie({
-    name: "The Matrix",
-    year: 1999,
-    runtime: 136,
-    imdbRating: 8.7,
-    genre: "sci-fi",
-  });
-}
+// A second user for the isolation tests.
+const cinephileInput = {
+  username: "cinephile",
+  email: "cinephile@example.com",
+  password: "testpassword2000",
+};
 
 beforeEach(async () => {
   await resetDB();
@@ -22,9 +23,8 @@ beforeEach(async () => {
 
 describe("movieRatings", () => {
   it("creates a new movie rating", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
 
     const res = await agent
       .post(`/api/ratings/${movie.id}`)
@@ -34,7 +34,7 @@ describe("movieRatings", () => {
 
   it("returns 401 for unauthenticated user", async () => {
     const agent = request.agent(app);
-    const movie = await addTestMovie();
+    const movie = await createTestMovie();
 
     const res = await agent.post(`/api/ratings/${movie.id}`);
     expect(res.status).toBe(401);
@@ -42,25 +42,22 @@ describe("movieRatings", () => {
   });
 
   it("POST returns 400 for malformed uuid", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
+    const agent = await authenticatedAgent(app);
 
     const res = await agent.post("/api/ratings/not-a-uuid");
     expect(res.status).toBe(400);
   });
 
   it("DELETE returns 400 for malformed uuid", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
+    const agent = await authenticatedAgent(app);
 
     const res = await agent.delete("/api/ratings/not-a-uuid");
     expect(res.status).toBe(400);
   });
 
   it("DELETE is idempotent", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
 
     const rating = await agent
       .post(`/api/ratings/${movie.id}`)
@@ -77,9 +74,8 @@ describe("movieRatings", () => {
   });
 
   it("POST overrides rating", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
 
     const firstRating = await agent
       .post(`/api/ratings/${movie.id}`)
@@ -97,9 +93,8 @@ describe("movieRatings", () => {
   });
 
   it("GET returns a matching rating", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
     const user = await getUserByUsername(registerInput.username);
 
     await agent.post(`/api/ratings/${movie.id}`).send({ rating: 9 });
@@ -112,12 +107,9 @@ describe("movieRatings", () => {
   });
 
   it("DELETE leaves other ratings untouched", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
-    const secondMovie = await createMovie({
-      name: "Inception",
-    });
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
+    const secondMovie = await createTestMovie({ name: "The Matrix" });
 
     const rating = await agent
       .post(`/api/ratings/${movie.id}`)
@@ -137,9 +129,8 @@ describe("movieRatings", () => {
   });
 
   it("rejects out-of-range and non-integer ratings", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
 
     const invalidRatings = [
       11,
@@ -157,8 +148,7 @@ describe("movieRatings", () => {
   });
 
   it("POST returns 404 for an unknown movie", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
+    const agent = await authenticatedAgent(app);
 
     const res = await agent
       .post("/api/ratings/00000000-0000-0000-0000-000000000000")
@@ -167,24 +157,17 @@ describe("movieRatings", () => {
   });
 
   it("GET returns 404 for an unrated movie", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
 
     const res = await agent.get(`/api/ratings/${movie.id}`);
     expect(res.status).toBe(404);
   });
 
   it("isolates ratings between users", async () => {
-    const alice = request.agent(app);
-    await alice.post("/api/users/register").send(registerInput);
-    const bob = request.agent(app);
-    await bob.post("/api/users/register").send({
-      username: "cinephile",
-      email: "cinephile@example.com",
-      password: "testpassword2000",
-    });
-    const movie = await addTestMovie();
+    const alice = await authenticatedAgent(app);
+    const bob = await authenticatedAgent(app, cinephileInput);
+    const movie = await createTestMovie();
 
     const aliceRating = await alice
       .post(`/api/ratings/${movie.id}`)
@@ -211,11 +194,10 @@ describe("movieRatings", () => {
   });
 
   it("GET '/api/ratings' returns all ratings for logged in user", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie = await addTestMovie();
-    const movie2 = await createMovie({ name: "Inception" });
-    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+    const agent = await authenticatedAgent(app);
+    const movie = await createTestMovie();
+    const movie2 = await createTestMovie({ name: "The Matrix" });
+    const movie3 = await createTestMovie({ name: "The Godfather", year: 1975 });
 
     const noRatings = await agent.get("/api/ratings");
     expect(noRatings.body).toHaveLength(0);
@@ -238,11 +220,10 @@ describe("movieRatings", () => {
   });
 
   it("GET '/api/ratings' returns correct rating values and movie IDs", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie1 = await addTestMovie();
-    const movie2 = await createMovie({ name: "Inception" });
-    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+    const agent = await authenticatedAgent(app);
+    const movie1 = await createTestMovie();
+    const movie2 = await createTestMovie({ name: "The Matrix" });
+    const movie3 = await createTestMovie({ name: "The Godfather", year: 1975 });
 
     await agent.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });
     await agent.post(`/api/ratings/${movie2.id}`).send({ rating: 8 });
@@ -260,16 +241,10 @@ describe("movieRatings", () => {
   });
 
   it("GET '/api/ratings' isolates ratings between users", async () => {
-    const alice = request.agent(app);
-    await alice.post("/api/users/register").send(registerInput);
-    const bob = request.agent(app);
-    await bob.post("/api/users/register").send({
-      username: "cinephile",
-      email: "cinephile@example.com",
-      password: "testpassword2000",
-    });
-    const movie1 = await addTestMovie();
-    const movie2 = await createMovie({ name: "Inception" });
+    const alice = await authenticatedAgent(app);
+    const bob = await authenticatedAgent(app, cinephileInput);
+    const movie1 = await createTestMovie();
+    const movie2 = await createTestMovie({ name: "The Matrix" });
 
     await alice.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });
     await alice.post(`/api/ratings/${movie2.id}`).send({ rating: 8 });
@@ -289,11 +264,10 @@ describe("movieRatings", () => {
   });
 
   it("GET '/api/ratings' returns ratings sorted by movieId", async () => {
-    const agent = request.agent(app);
-    await agent.post("/api/users/register").send(registerInput);
-    const movie1 = await addTestMovie();
-    const movie2 = await createMovie({ name: "Inception" });
-    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+    const agent = await authenticatedAgent(app);
+    const movie1 = await createTestMovie();
+    const movie2 = await createTestMovie({ name: "The Matrix" });
+    const movie3 = await createTestMovie({ name: "The Godfather", year: 1975 });
 
     await agent.post(`/api/ratings/${movie3.id}`).send({ rating: 7 });
     await agent.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });

@@ -2,8 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/server.js";
 import { changeRole, getUserByEmail } from "../src/db/queries/users.js";
-import { createMovie } from "../src/db/queries/movies.js";
-import { resetDB } from "./helpers.js";
+import { authenticatedAgent, createTestMovie, resetDB } from "./helpers.js";
 
 const adminInput = {
   username: "theatreboss",
@@ -19,18 +18,20 @@ const regularInput = {
 
 type RegisterInput = typeof adminInput;
 
-// Registers the user, optionally promotes them, and returns a supertest
-// agent carrying the logged-in user's JWT cookies.
+// Registers the user and returns a supertest agent carrying the
+// logged-in user's JWT cookies. Admins need a fresh login after the
+// role change so the issued token carries the admin claim.
 async function registerAndLogin(
   input: RegisterInput,
   role: "user" | "admin" = "user",
 ) {
+  if (role === "user") {
+    return authenticatedAgent(app, input);
+  }
   const res = await request(app).post("/api/users/register").send(input);
   expect(res.status).toBe(201);
-  if (role === "admin") {
-    const user = await getUserByEmail(input.email);
-    await changeRole(user!.id, "admin");
-  }
+  const user = await getUserByEmail(input.email);
+  await changeRole(user!.id, "admin");
   const agent = request.agent(app);
   const login = await agent
     .post("/api/users/login")
@@ -39,11 +40,11 @@ async function registerAndLogin(
   return agent;
 }
 
-describe("admin routes", () => {
-  beforeEach(async () => {
-    await resetDB();
-  });
+beforeEach(async () => {
+  await resetDB();
+});
 
+describe("admin routes", () => {
   it("GET /api/admin/users without authentication returns 401", async () => {
     const res = await request(app).get("/api/admin/users");
 
@@ -125,7 +126,7 @@ describe("admin routes", () => {
   it("DELETE /api/admin/movies/:id by a non-admin returns 403", async () => {
     await registerAndLogin(adminInput);
     const agent = await registerAndLogin(regularInput);
-    const movie = await createMovie({ name: "Admin Test Movie" });
+    const movie = await createTestMovie({ name: "Admin Test Movie" });
 
     const res = await agent.delete(`/api/admin/movies/${movie.id}`);
 
@@ -135,7 +136,7 @@ describe("admin routes", () => {
 
   it("DELETE /api/admin/movies/:id as an admin deletes the movie", async () => {
     const agent = await registerAndLogin(adminInput, "admin");
-    const movie = await createMovie({ name: "Admin Test Movie" });
+    const movie = await createTestMovie({ name: "Admin Test Movie" });
 
     const res = await agent.delete(`/api/admin/movies/${movie.id}`);
 
@@ -147,10 +148,6 @@ describe("admin routes", () => {
 });
 
 describe("self-service deletion", () => {
-  beforeEach(async () => {
-    await resetDB();
-  });
-
   it("DELETE /api/users/:id lets a non-admin delete their own account", async () => {
     const agent = await registerAndLogin(regularInput);
     const self = await getUserByEmail(regularInput.email);

@@ -11,6 +11,7 @@ import {
   registerInput,
   registerUser,
   resetDB,
+  setCookieHeaders,
 } from "./helpers.js";
 
 describe("users", () => {
@@ -82,9 +83,7 @@ describe("users", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ username: "movielover" });
 
-    const headers = (res.headers["set-cookie"] as unknown as string[]) ?? [
-      res.headers["set-cookie"],
-    ];
+    const headers = setCookieHeaders(res);
     const accessCookie = headers.find((h) => h.startsWith("theatre.jwt="));
     const refreshCookie = headers.find((h) => h.startsWith("theatre.refresh="));
     expect(accessCookie).toContain("HttpOnly");
@@ -173,11 +172,7 @@ describe("users", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ message: "Logged out" });
-    // supertest types set-cookie as a single string; at runtime it is an
-    // array when multiple Set-Cookie headers are sent.
-    const cleared = (res.headers["set-cookie"] as unknown as string[]).join(
-      " ",
-    );
+    const cleared = setCookieHeaders(res).join(" ");
     expect(cleared).toContain("theatre.jwt=");
     expect(cleared).toContain("theatre.refresh=");
     expect(cleared).toContain("Expires=Thu, 01 Jan 1970");

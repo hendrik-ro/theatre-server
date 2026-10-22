@@ -67,7 +67,16 @@ beforeEach(() => {
 
 describe("moviesGetAll", () => {
   it("responds with all movies", async () => {
-    const movies = [movie, { ...movie, id: "b", name: "Inception" }];
+    const movies = [
+      { ...movie, averageRating: null, ratingCount: 0 },
+      {
+        ...movie,
+        id: "b",
+        name: "Inception",
+        averageRating: null,
+        ratingCount: 0,
+      },
+    ];
     vi.mocked(getAllMovies).mockResolvedValue(movies);
 
     const res = makeResponse();
@@ -90,14 +99,22 @@ describe("moviesGetAll", () => {
 
 describe("moviesGetById", () => {
   it("looks up the id from req.params and responds 200 with the movie", async () => {
-    vi.mocked(getMovieById).mockResolvedValue(movie);
+    vi.mocked(getMovieById).mockResolvedValue({
+      ...movie,
+      averageRating: null,
+      ratingCount: 0,
+    });
 
     const res = makeResponse();
     await moviesGetById(makeRequest({ params: { id: movie.id } }), res);
 
     expect(getMovieById).toHaveBeenCalledWith(movie.id);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(movie);
+    expect(res.json).toHaveBeenCalledWith({
+      ...movie,
+      averageRating: null,
+      ratingCount: 0,
+    });
   });
 
   it("responds 404 and no movie body when the id is unknown", async () => {

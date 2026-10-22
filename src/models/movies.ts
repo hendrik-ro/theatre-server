@@ -13,6 +13,11 @@ export interface Movie {
   id: string;
 }
 
+export interface MovieWithRatings extends Movie {
+  averageRating: number | null;
+  ratingCount: number;
+}
+
 export interface MoviesMeta {
   totalMovies: number;
   moviesPerYear: { year: number | null; count: number }[];
