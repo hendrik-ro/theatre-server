@@ -4,6 +4,7 @@ import { registerInput, resetDB } from "./helpers.js";
 import { app } from "../src/server.js";
 import { createMovie } from "../src/db/queries/movies.js";
 import { getUserByUsername } from "../src/db/queries/users.js";
+import { UserMovieRating } from "../src/models/ratings.js";
 
 async function addTestMovie() {
   return await createMovie({
@@ -207,5 +208,100 @@ describe("movieRatings", () => {
     const bobGetAfterDelete = await bob.get(`/api/ratings/${movie.id}`);
     expect(bobGetAfterDelete.status).toBe(200);
     expect(bobGetAfterDelete.body.rating).toBe(5);
+  });
+
+  it("GET '/api/ratings' returns all ratings for logged in user", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/users/register").send(registerInput);
+    const movie = await addTestMovie();
+    const movie2 = await createMovie({ name: "Inception" });
+    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+
+    const noRatings = await agent.get("/api/ratings");
+    expect(noRatings.body).toHaveLength(0);
+
+    const rating = await agent
+      .post(`/api/ratings/${movie.id}`)
+      .send({ rating: 9 });
+    expect(rating.status).toBe(201);
+    const rating2 = await agent
+      .post(`/api/ratings/${movie2.id}`)
+      .send({ rating: 8 });
+    expect(rating2.status).toBe(201);
+    const rating3 = await agent
+      .post(`/api/ratings/${movie3.id}`)
+      .send({ rating: 7 });
+    expect(rating3.status).toBe(201);
+
+    const allRatings = await agent.get("/api/ratings");
+    expect(allRatings.body).toHaveLength(3);
+  });
+
+  it("GET '/api/ratings' returns correct rating values and movie IDs", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/users/register").send(registerInput);
+    const movie1 = await addTestMovie();
+    const movie2 = await createMovie({ name: "Inception" });
+    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+
+    await agent.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });
+    await agent.post(`/api/ratings/${movie2.id}`).send({ rating: 8 });
+    await agent.post(`/api/ratings/${movie3.id}`).send({ rating: 7 });
+
+    const allRatings = await agent.get("/api/ratings");
+    expect(allRatings.body).toHaveLength(3);
+
+    const ratings = allRatings.body as UserMovieRating[];
+    const ratingsByMovieId = new Map(ratings.map((r) => [r.movieId, r]));
+
+    expect(ratingsByMovieId.get(movie1.id)?.rating).toBe(9);
+    expect(ratingsByMovieId.get(movie2.id)?.rating).toBe(8);
+    expect(ratingsByMovieId.get(movie3.id)?.rating).toBe(7);
+  });
+
+  it("GET '/api/ratings' isolates ratings between users", async () => {
+    const alice = request.agent(app);
+    await alice.post("/api/users/register").send(registerInput);
+    const bob = request.agent(app);
+    await bob.post("/api/users/register").send({
+      username: "cinephile",
+      email: "cinephile@example.com",
+      password: "testpassword2000",
+    });
+    const movie1 = await addTestMovie();
+    const movie2 = await createMovie({ name: "Inception" });
+
+    await alice.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });
+    await alice.post(`/api/ratings/${movie2.id}`).send({ rating: 8 });
+    await bob.post(`/api/ratings/${movie1.id}`).send({ rating: 5 });
+
+    const aliceRatings = await alice.get("/api/ratings");
+    expect(aliceRatings.body).toHaveLength(2);
+    const aliceRatingsTyped = aliceRatings.body as UserMovieRating[];
+    expect(
+      aliceRatingsTyped.every((r) => r.userId === aliceRatingsTyped[0].userId),
+    ).toBe(true);
+
+    const bobRatings = await bob.get("/api/ratings");
+    expect(bobRatings.body).toHaveLength(1);
+    const bobRatingsTyped = bobRatings.body as UserMovieRating[];
+    expect(bobRatingsTyped[0].rating).toBe(5);
+  });
+
+  it("GET '/api/ratings' returns ratings sorted by movieId", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/users/register").send(registerInput);
+    const movie1 = await addTestMovie();
+    const movie2 = await createMovie({ name: "Inception" });
+    const movie3 = await createMovie({ name: "The Godfather", year: 1975 });
+
+    await agent.post(`/api/ratings/${movie3.id}`).send({ rating: 7 });
+    await agent.post(`/api/ratings/${movie1.id}`).send({ rating: 9 });
+    await agent.post(`/api/ratings/${movie2.id}`).send({ rating: 8 });
+
+    const allRatings = await agent.get("/api/ratings");
+    const ratingsTyped = allRatings.body as UserMovieRating[];
+    const movieIds = ratingsTyped.map((r) => r.movieId);
+    expect(movieIds).toEqual([...movieIds].sort());
   });
 });

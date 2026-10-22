@@ -1,5 +1,6 @@
 import { getMovieById } from "../db/queries/movies.js";
 import {
+  getAllRatings,
   getMovieRating,
   rateMovie,
   unrateMovie,
@@ -27,11 +28,17 @@ export const movieRatingsDelete: AsyncRequestHandler = async (req, res) => {
   res.sendStatus(204);
 };
 
-export const movieRatingsGet: AsyncRequestHandler = async (req, res) => {
+export const movieRatingsGetRating: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
   const movieId = req.params.movieId;
   assertUUID(movieId);
   const rating = await getMovieRating(user.id, movieId);
   if (!rating) return res.sendStatus(404);
   res.status(200).json(rating);
+};
+
+export const movieRatingsGetAll: AsyncRequestHandler = async (req, res) => {
+  const user = requireUser(req);
+  const ratings = await getAllRatings(user.id);
+  res.status(200).json(ratings);
 };
