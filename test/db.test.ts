@@ -138,7 +138,14 @@ describe("getMovieById", () => {
   it("finds a movie by id", async () => {
     const created = await createMovie({ name: "Inception", year: 2010 });
 
-    expect(await getMovieById(created.id)).toEqual(created);
+    const found = await getMovieById(created.id);
+    expect(found).toMatchObject({
+      id: created.id,
+      name: "Inception",
+      year: 2010,
+    });
+    expect(found?.averageRating).toBeNull();
+    expect(found?.ratingCount).toBe(0);
   });
 
   it("returns undefined for an unknown id", async () => {
