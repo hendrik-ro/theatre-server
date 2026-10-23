@@ -48,9 +48,10 @@ function startServer() {
     server.close(async () => {
       // The pool close failing must not turn the exit code nonzero —
       // an unhandled rejection here would exit(1), which docker/k8s
-      // read as a crash. Revisit when the app gets containerized
-      // (Phase 4 / VPS deployment, see ROADMAP.md).
-      await closeDB().catch(() => {});
+      // read as a crash. Revisit before deployment.
+      await closeDB().catch((err) => {
+        console.error("DB close error:", err);
+      });
       process.exit(0);
     });
     setTimeout(() => process.exit(0), 5_000).unref();
