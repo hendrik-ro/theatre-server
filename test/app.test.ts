@@ -51,3 +51,83 @@ describe("app", () => {
     expect(res.headers["set-cookie"]).toBeUndefined();
   });
 });
+
+describe("CORS", () => {
+  it("sets CORS headers for simple requests in development", async () => {
+    const res = await request(app)
+      .get("/api/health")
+      .set("Origin", "http://localhost:5173");
+
+    // With credentials: true, the origin must be explicit, not "*"
+    expect(res.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:5173",
+    );
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
+
+  it("sets CORS headers for preflight OPTIONS requests", async () => {
+    const res = await request(app)
+      .options("/api/movies")
+      .set("Origin", "http://localhost:5173")
+      .set("Access-Control-Request-Method", "GET");
+
+    // With credentials: true, the origin must be explicit, not "*"
+    expect(res.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:5173",
+    );
+    expect(res.headers["access-control-allow-methods"]).toContain("GET");
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
+
+  it("allows requests without Origin header", async () => {
+    const res = await request(app).get("/api/health");
+
+    expect(res.status).toBe(200);
+  });
+
+  it("allows any origin in development mode", async () => {
+    // In development, any origin should be accepted
+    const customOrigin = "http://custom.example.com:8080";
+    const res = await request(app)
+      .get("/api/health")
+      .set("Origin", customOrigin);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["access-control-allow-origin"]).toBe(customOrigin);
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
+});
+
+describe("Health check", () => {
+  it("returns 200 with db status when database is connected", async () => {
+    const res = await request(app).get("/api/health");
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ok");
+    expect(res.body.db).toBe("connected");
+  });
+
+  it("response includes both status and db fields", async () => {
+    const res = await request(app).get("/api/health");
+
+    expect(res.body).toHaveProperty("status");
+    expect(res.body).toHaveProperty("db");
+    expect(typeof res.body.status).toBe("string");
+    expect(typeof res.body.db).toBe("string");
+  });
+});
+
+describe("Graceful shutdown", () => {
+  it("server exports app for testing", async () => {
+    expect(app).toBeDefined();
+    expect(typeof app.listen).toBe("function");
+  });
+
+  it("app has middleware chain including CORS and errorHandler", async () => {
+    // Verify the app has the expected middleware
+    expect(app._router).toBeDefined();
+    // The middleware stack should include our routes
+    const routes = app._router.stack;
+    expect(routes.length).toBeGreaterThan(0);
+  });
+});

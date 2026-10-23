@@ -6,7 +6,12 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
   SERVER_PORT: z.coerce.number().int().min(0).max(65535),
-  ALLOWED_ORIGINS: z.string(),
+  ALLOWED_ORIGINS: z
+    .string()
+    .refine(
+      (val) => val.split(",").every((o) => o.trim() !== ""),
+      "ALLOWED_ORIGINS must be a comma-separated list of non-empty origins",
+    ),
   POSTGRES_USER: z.string().default("postgres"),
   POSTGRES_PASSWORD: z.string().default("postgres"),
   POSTGRES_HOST: z.string().default("localhost"),
