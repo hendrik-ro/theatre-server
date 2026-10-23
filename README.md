@@ -267,7 +267,6 @@ All commands are run from the repository root.
 - **Pagination** — implement `GET /api/movies` pagination to handle growing movie collections efficiently
 - **Caching layer** — add Redis for caching rating averages, reducing repeated aggregation queries
 - **Database index** — create index on `movie_ratings(movie_id)` to optimize rating aggregation queries
-- **Health check enhancement** — extend `GET /api/health` to verify database connectivity, not just server liveness
 - **Request logging** — add structured logging middleware for debugging and monitoring production traffic
 - **Deployment** — deployment of app plus database as containers on a single VPS
 

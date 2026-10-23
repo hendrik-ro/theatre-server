@@ -4,12 +4,14 @@ import helmet from "helmet";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { authenticateJWT } from "./middleware/authenticateJWT.js";
 import { config } from "./config.js";
-import { closeDB } from "./db/index.js";
+import { closeDB, db } from "./db/index.js";
 import adminRouter from "./routes/admin.js";
 import movieRouter from "./routes/movies.js";
 import userRouter from "./routes/users.js";
 import watchlistsRouter from "./routes/watchlists.js";
 import movieRatingsRouter from "./routes/movieRatings.js";
+import { movies } from "./db/schema/movies.sql.js";
+import { count } from "drizzle-orm";
 
 const app = express();
 const port = config.serverPort;
@@ -26,8 +28,13 @@ app.use("/api/admin", adminRouter);
 app.use("/api/watchlists", watchlistsRouter);
 app.use("/api/ratings", movieRatingsRouter);
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+app.get("/api/health", async (_req, res) => {
+  try {
+    await db.select({ count: count() }).from(movies);
+    res.json({ status: "ok", db: "connected" });
+  } catch {
+    res.status(503).json({ status: "error", db: "disconnected" });
+  }
 });
 
 // JSON 404 for unknown /api routes
