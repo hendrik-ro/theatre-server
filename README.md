@@ -260,7 +260,6 @@ All commands are run from the repository root.
 
 ## Roadmap
 
-- **CORS middleware** — enable cross-origin requests in production; currently missing, which will block browser clients
 - **CSRF protection** — add CSRF tokens or use `sameSite=strict` for auth cookies to prevent cross-site request forgery
 - **Rate limiting** — protect authentication endpoints (`/api/users/login`, `/api/users/register`, `/api/users/refresh`) from brute-force attacks
 - **Refresh token security** — enhance server-side refresh token storage with revocation lists for compromised tokens
