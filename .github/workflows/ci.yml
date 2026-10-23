@@ -48,3 +48,4 @@ jobs:
           SERVER_PORT: 3000
           JWT_SECRET: N8oJbM+irF9xldT++zVX5fSZVAxBxpOSaBfvWYuw7iI=
           REFRESH_SECRET: 8ba190f9aa18fccbdee5af91e530dbd773f16a0d7b497137fa07ffd98f96bb21
+          ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000

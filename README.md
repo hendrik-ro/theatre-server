@@ -260,14 +260,12 @@ All commands are run from the repository root.
 
 ## Roadmap
 
-- **CORS middleware** — enable cross-origin requests in production; currently missing, which will block browser clients
 - **CSRF protection** — add CSRF tokens or use `sameSite=strict` for auth cookies to prevent cross-site request forgery
 - **Rate limiting** — protect authentication endpoints (`/api/users/login`, `/api/users/register`, `/api/users/refresh`) from brute-force attacks
 - **Refresh token security** — enhance server-side refresh token storage with revocation lists for compromised tokens
 - **Pagination** — implement `GET /api/movies` pagination to handle growing movie collections efficiently
 - **Caching layer** — add Redis for caching rating averages, reducing repeated aggregation queries
 - **Database index** — create index on `movie_ratings(movie_id)` to optimize rating aggregation queries
-- **Health check enhancement** — extend `GET /api/health` to verify database connectivity, not just server liveness
 - **Request logging** — add structured logging middleware for debugging and monitoring production traffic
 - **Deployment** — deployment of app plus database as containers on a single VPS
 
