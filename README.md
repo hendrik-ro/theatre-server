@@ -297,6 +297,7 @@ All commands are run from the repository root.
 
 ## Roadmap
 
+- **Pagination (fix)** - Add filtering params to GET /api/movies to filter through paginated results
 - **Rate limiting** — protect authentication endpoints (`/api/users/login`, `/api/users/register`, `/api/users/refresh`) from brute-force attacks
 - **Refresh token security** — enhance server-side refresh token storage with revocation lists for compromised tokens
 - **Caching layer** — add Redis for caching rating averages, reducing repeated aggregation queries
