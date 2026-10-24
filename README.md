@@ -19,30 +19,30 @@ repository; the backend is the focus of this project.
 REST endpoints, versioned through semantic-release and JSON errors
 throughout: `{ "message": string }`.
 
-| Method | Route                      | Auth           | Description                                               |
-| ------ | -------------------------- | -------------- | --------------------------------------------------------- |
-| POST   | `/api/users/register`      | —              | Create an account and log in                              |
-| POST   | `/api/users/login`         | —              | Log in                                                    |
-| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies                   |
-| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                     |
-| GET    | `/api/users/me`            | session        | Current user profile                                      |
-| DELETE | `/api/users/:id`           | self/admin     | Delete an account                                         |
-| GET    | `/api/movies`              | —              | List all movies with community rating averages            |
-| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                           |
-| GET    | `/api/movies/:id`          | —              | Fetch one movie with community rating averages            |
-| POST   | `/api/movies`              | session        | Create a movie                                            |
-| PUT    | `/api/movies/:id`          | session        | Update a movie                                            |
-| GET    | `/api/watchlists`          | session        | List the current user's watchlist                         |
-| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist                              |
-| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist                         |
-| GET    | `/api/ratings`             | session        | List all ratings for the current user (sorted by movieId) |
-| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie                         |
-| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)                    |
-| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                                  |
-| GET    | `/api/admin/users`         | admin          | List all users                                            |
-| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                                             |
-| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                                            |
-| GET    | `/api/health`              | —              | Liveness check                                            |
+| Method | Route                      | Auth           | Description                                                                |
+| ------ | -------------------------- | -------------- | -------------------------------------------------------------------------- |
+| POST   | `/api/users/register`      | —              | Create an account and log in                                               |
+| POST   | `/api/users/login`         | —              | Log in                                                                     |
+| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies                                    |
+| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                                      |
+| GET    | `/api/users/me`            | session        | Current user profile                                                       |
+| DELETE | `/api/users/:id`           | self/admin     | Delete an account                                                          |
+| GET    | `/api/movies`              | —              | List movies, paginated (`?page`, `?limit`), with community rating averages |
+| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                                            |
+| GET    | `/api/movies/:id`          | —              | Fetch one movie with community rating averages                             |
+| POST   | `/api/movies`              | session        | Create a movie                                                             |
+| PUT    | `/api/movies/:id`          | session        | Update a movie                                                             |
+| GET    | `/api/watchlists`          | session        | List the current user's watchlist                                          |
+| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist                                               |
+| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist                                          |
+| GET    | `/api/ratings`             | session        | List all ratings for the current user (sorted by movieId)                  |
+| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie                                          |
+| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)                                     |
+| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                                                   |
+| GET    | `/api/admin/users`         | admin          | List all users                                                             |
+| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                                                              |
+| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                                                             |
+| GET    | `/api/health`              | —              | Liveness check                                                             |
 
 Here "session" in the Auth column means a valid JWT access-token cookie
 (`theatre.jwt`) issued by registration, login, or refresh — the API
@@ -55,6 +55,13 @@ to one decimal (e.g. `8.7`), or `null` when nobody has rated it yet — and
 computed on read from the ratings table, so they are always current and
 never stored.
 
+`GET /api/movies` is paginated: `?page` (default 1) and `?limit`
+(default 20, capped at 100) are validated with Zod, and the response is
+an envelope — `{ movies, page, limit, total, totalPages }` — with each
+page's movies ordered by name so pages stay stable as the collection
+grows. (A breaking change: this endpoint previously returned a bare
+array.)
+
 ## Architecture
 
 Layered structure with one responsibility per directory — routes stay
@@ -63,8 +70,9 @@ testable:
 
 ```
 src/
-├── server.ts          # app wiring: helmet, JSON limit, auth, routers, 404, error handler
+├── server.ts          # app wiring: helmet, CORS, JSON limit, request logging, auth, routers, 404, error handler
 ├── config.ts          # env parsed and validated with Zod at startup
+├── logger.ts          # structured logging: JSON lines to stdout and file
 ├── routes/            # URL → middleware + controller mapping only
 ├── middleware/        # authenticateJWT, requireAuth, requireAdmin(OrSelf), central error handler
 ├── controllers/      # request/response handling; no SQL
@@ -73,13 +81,14 @@ src/
 ├── db/migrations/     # generated, reviewable SQL migrations
 ├── models/            # Zod input schemas and domain types
 ├── auth/              # password hashing, token signing, cookie handling
-├── utils/             # asyncHandler wrapper, HttpError
-└── test/              # integration and unit tests (Vitest + supertest)
+└── utils/             # asyncHandler wrapper, HttpError
+test/                  # integration and unit tests (Vitest + supertest)
 ```
 
-Request flow: `route → middleware → controller → Zod validation → query
-layer → PostgreSQL`, with a single central error handler mapping every
-failure mode to a consistent JSON response:
+Request flow: `route → middleware → controller → Zod validation
+(request bodies and query params) → query layer → PostgreSQL`, with a
+single central error handler mapping every failure mode to a consistent
+JSON response:
 
 - Zod validation failures → `400`
 - malformed or oversized JSON → `400` / `413`
@@ -88,6 +97,24 @@ failure mode to a consistent JSON response:
 - JWT failures → `401` with a generic message
 - unknown `/api` routes → JSON `404` instead of an HTML page
 - anything else → `500`, with the real message hidden in production
+
+## Logging
+
+Structured logging without a framework: every event is one JSON line,
+written to stdout (for container log collection) and to
+`data/theatre-server.log` (kept trimmed to the most recent entries).
+Each request gets a `requestId` that ties its `api` event — method,
+path, status, duration — to the domain events it triggered:
+
+- **auth & audit**: registration, first-admin bootstrap claim, login
+  success and failure (attempted username and reason — never
+  passwords), logout, token refresh, refresh-token reuse rejection,
+  and account deletion including the acting admin
+- **security**: invalid tokens with the expected type and reason, and
+  unhandled 500s
+
+Sensitive keys (passwords, token hashes, emails) are redacted, request
+bodies are never logged, and high-frequency health checks are excluded.
 
 ## Authentication & Security
 
@@ -103,7 +130,13 @@ Not a library call — the whole scheme is implemented deliberately:
   `/api/users/refresh` verifies the presented token against the database
   row before reissuing
 - **Cookie hardening**: `httpOnly`, `sameSite=lax`, `secure` in
-  production
+  production. Together with the JSON-only body limit this covers CSRF
+  without tokens: lax cookies are never sent with cross-site
+  POST/PUT/DELETE requests, and cross-site HTML forms cannot produce an
+  `application/json` body that the parser would accept
+- **CORS**: in production, cross-origin requests are restricted to the
+  `ALLOWED_ORIGINS` allowlist (credentials allowed); in development the
+  request origin is reflected so the Vite dev server can proxy `/api`
 - **RBAC** (`user` / `admin`) via `requireAuth`, `requireAdmin`, and
   `requireAdminOrSelf` middleware; self-service account deletion for
   regular users, admin module mounted behind one router-level guard
@@ -140,8 +173,10 @@ real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on
 movies and users, per-user watchlist and rating isolation, rating
-validation, the first-admin bootstrap race, and error-handler mapping. A shared global setup creates and migrates the test database
-once per run instead of once per file.
+validation, pagination (defaults, coercion, page slicing), the
+first-admin bootstrap race, and error-handler mapping. A shared global
+setup creates and migrates the test database once per run instead of
+once per file.
 
 ## Tech Stack
 
@@ -149,8 +184,8 @@ once per run instead of once per file.
   with project references (`tsc -b`)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle
   ORM](https://orm.drizzle.team/) and drizzle-kit migrations
-- **Validation**: [Zod](https://zod.dev/) for both env config and request
-  bodies
+- **Validation**: [Zod](https://zod.dev/) for env config, request
+  bodies, and query parameters
 - **Auth**: [argon2](https://github.com/ranisalt/node-argon2),
   [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)
 - **Tooling**: [oxlint](https://oxc.rs/docs/guide/usage/linter),
@@ -185,7 +220,9 @@ yourself, or the compose database (see [Run with Docker](#run-with-docker)).
 
    Then edit `.env`: set `JWT_SECRET` and `REFRESH_SECRET` to different
    random strings of at least 32 characters each (e.g. the output of
-   `openssl rand -base64 32`). The remaining defaults match the compose
+   `openssl rand -base64 32`). `ALLOWED_ORIGINS` lists the origins
+   permitted to call the API in production (the default already includes
+   the Vite dev server). The remaining defaults match the compose
    database — override the `POSTGRES_*` parts for your own instance.
 
 3. Generate and apply database migrations:
@@ -260,10 +297,8 @@ All commands are run from the repository root.
 
 ## Roadmap
 
-- **CSRF protection** — add CSRF tokens or use `sameSite=strict` for auth cookies to prevent cross-site request forgery
 - **Rate limiting** — protect authentication endpoints (`/api/users/login`, `/api/users/register`, `/api/users/refresh`) from brute-force attacks
 - **Refresh token security** — enhance server-side refresh token storage with revocation lists for compromised tokens
-- **Pagination** — implement `GET /api/movies` pagination to handle growing movie collections efficiently
 - **Caching layer** — add Redis for caching rating averages, reducing repeated aggregation queries
 - **Database index** — create index on `movie_ratings(movie_id)` to optimize rating aggregation queries
 - **Deployment** — deployment of app plus database as containers on a single VPS
