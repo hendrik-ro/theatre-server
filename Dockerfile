@@ -20,6 +20,10 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY src/db/migrations ./src/db/migrations
+# The logger appends to <cwd>/data (see src/logger.ts); /app itself is
+# root-owned from COPY, so the runtime `node` user needs a writable dir
+# pre-created here.
+RUN mkdir /app/data && chown node:node /app/data
 USER node
 EXPOSE 3000
 # The image only serves; migrations are applied by the one-shot migrate

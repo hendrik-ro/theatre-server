@@ -45,6 +45,8 @@ services:
       SERVER_PORT: ${SERVER_PORT}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
+    volumes:
+      - logs:/app/data
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
@@ -53,3 +55,4 @@ services:
 
 volumes:
   pgdata:
+  logs:
