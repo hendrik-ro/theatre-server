@@ -5,11 +5,17 @@ import {
   getMoviesMetaData,
   updateMovie,
 } from "../db/queries/movies.js";
-import { Movie, MoviesMeta, movieInputSchema } from "../models/movies.js";
+import {
+  Movie,
+  MoviesMeta,
+  movieInputSchema,
+  moviePaginationQuery,
+} from "../models/movies.js";
 import type { AsyncRequestHandler } from "../utils/asyncHandler.js";
 
-export const moviesGetAll: AsyncRequestHandler = async (_req, res) => {
-  const result = await getAllMovies();
+export const moviesGetAll: AsyncRequestHandler = async (req, res) => {
+  const { page, limit } = moviePaginationQuery.parse(req.query);
+  const result = await getAllMovies(page, limit);
   res.json(result);
 };
 

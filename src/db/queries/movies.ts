@@ -6,6 +6,7 @@ import {
   Movie,
   MovieInput,
   MoviesMeta,
+  MoviesPaginated,
   MovieWithRatings,
 } from "../../models/movies.js";
 import { movieRatings } from "../schema/movieRatings.js";
@@ -38,9 +39,14 @@ function toMovieWithRatings(
   };
 }
 
-function selectAllMoviesWithRatings() {
+interface Pagination {
+  page: number;
+  limit: number;
+}
+
+function selectAllMoviesWithRatings(pagination?: Pagination) {
   const averages = ratingAverages();
-  return db
+  const selection = db
     .select({
       ...getTableColumns(movies),
       averageRating: averages.average,
@@ -48,11 +54,26 @@ function selectAllMoviesWithRatings() {
     })
     .from(movies)
     .leftJoin(averages, eq(averages.movieId, movies.id));
+  if (!pagination) return selection;
+  return selection
+    .orderBy(asc(movies.name))
+    .limit(pagination.limit)
+    .offset((pagination.page - 1) * pagination.limit);
 }
 
-export async function getAllMovies(): Promise<MovieWithRatings[]> {
-  const rows = await selectAllMoviesWithRatings();
-  return rows.map(toMovieWithRatings);
+export async function getAllMovies(
+  page: number,
+  limit: number,
+): Promise<MoviesPaginated> {
+  const [total] = await db.select({ count: count() }).from(movies);
+  const rows = await selectAllMoviesWithRatings({ page, limit });
+  return {
+    movies: rows.map(toMovieWithRatings),
+    page,
+    limit,
+    total: total.count,
+    totalPages: Math.ceil(total.count / limit),
+  };
 }
 
 export async function getMovieById(

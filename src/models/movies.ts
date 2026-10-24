@@ -18,6 +18,14 @@ export interface MovieWithRatings extends Movie {
   ratingCount: number;
 }
 
+export interface MoviesPaginated {
+  movies: MovieWithRatings[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface MoviesMeta {
   totalMovies: number;
   moviesPerYear: { year: number | null; count: number }[];
@@ -30,6 +38,11 @@ export const movieInputSchema = z.object({
   runtime: z.number().int().min(1).max(9999).optional(),
   imdbRating: z.number().min(0).max(10).optional(),
   genre: z.string().trim().min(1).max(100).optional(),
+});
+
+export const moviePaginationQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 export type MovieInput = z.infer<typeof movieInputSchema>;
