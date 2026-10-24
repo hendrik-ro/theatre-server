@@ -135,7 +135,7 @@ movie queries — rather than denormalized into storage.
 
 ## Testing
 
-Over 140 integration and unit tests (Vitest + supertest) run against a
+Over 150 integration and unit tests (Vitest + supertest) run against a
 real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on
@@ -266,7 +266,6 @@ All commands are run from the repository root.
 - **Pagination** — implement `GET /api/movies` pagination to handle growing movie collections efficiently
 - **Caching layer** — add Redis for caching rating averages, reducing repeated aggregation queries
 - **Database index** — create index on `movie_ratings(movie_id)` to optimize rating aggregation queries
-- **Request logging** — add structured logging middleware for debugging and monitoring production traffic
 - **Deployment** — deployment of app plus database as containers on a single VPS
 
 ## Contributing

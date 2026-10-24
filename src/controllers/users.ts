@@ -19,7 +19,8 @@ import {
   revokeRefreshToken,
 } from "../db/queries/refreshTokens.js";
 import { HttpError } from "../utils/errors.js";
-import { requireUser } from "./helpers.js";
+import { requireUser, requestId } from "./helpers.js";
+import { logEvent } from "../logger.js";
 
 export const usersRegister: AsyncRequestHandler = async (req, res) => {
   const input = userRegistrationSchema.parse(req.body);
@@ -28,6 +29,20 @@ export const usersRegister: AsyncRequestHandler = async (req, res) => {
     throw new Error("Password hashing failed");
   }
   const newUser = await createUser(input.username, input.email, hash);
+
+  logEvent("user_registration", {
+    requestId: requestId(res),
+    username: newUser.username,
+    role: newUser.role,
+  });
+  // Registrating an admin here means this call won the
+  // first-admin bootstrap claim.
+  if (newUser.role === "admin") {
+    logEvent("first_admin_bootstrap", {
+      requestId: requestId(res),
+      username: newUser.username,
+    });
+  }
 
   await issueTokens(res, newUser);
   await setLastLogin(newUser.id);
@@ -43,6 +58,11 @@ export const usersLogin: AsyncRequestHandler = async (req, res) => {
   // Same response for unknown email and wrong password: answering
   // differently leaks which emails are registered.
   if (!user) {
+    logEvent("user_login_failed", {
+      requestId: requestId(res),
+      username: input.username,
+      reason: "unknown_username",
+    });
     res.status(401).json({ message: "Invalid credentials" });
     return;
   }
@@ -51,12 +71,22 @@ export const usersLogin: AsyncRequestHandler = async (req, res) => {
     throw new Error("Password verification failed");
   }
   if (!isValid) {
+    logEvent("user_login_failed", {
+      requestId: requestId(res),
+      username: input.username,
+      reason: "wrong_password",
+    });
     res.status(401).json({ message: "Invalid credentials" });
     return;
   }
 
   await issueTokens(res, user);
   await setLastLogin(user.id);
+
+  logEvent("user_login", {
+    requestId: requestId(res),
+    user: user.username,
+  });
 
   res.status(200).json({ username: user.username });
 };
@@ -66,10 +96,14 @@ export const usersLogout: AsyncRequestHandler = async (req, res) => {
   await revokeRefreshToken(user.id);
   clearAuthCookies(res);
 
+  logEvent("user_logout", {
+    requestId: requestId(res),
+    user: user.username,
+  });
+
   res.status(200).json({ message: "Logged out" });
 };
 
-// requireAuth must have run; it attaches the authenticated user to req.user.
 export const usersMe: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
   res.status(200).json({
@@ -89,17 +123,35 @@ export const usersRefresh: AsyncRequestHandler = async (req, res) => {
   if (!token) {
     throw new HttpError(401, "Refresh token required");
   }
-  const payload = verifyRefreshToken(token);
+  const payload = verifyRefreshToken(token, requestId(res));
   const rowUserId = await getUserIdByRefreshToken(hashToken(token));
   if (!rowUserId || rowUserId !== payload.userId) {
+    // The token has a valid signature but no matching database row (or
+    // points at a different user): it was revoked, rotated away, or is
+    // being replayed — the strongest compromise signal this API has.
+    logEvent("token_refresh_rejected", {
+      requestId: requestId(res),
+      userId: payload.userId,
+      reason: !rowUserId ? "unknown_token" : "user_mismatch",
+    });
     throw new HttpError(401, "Invalid refresh token");
   }
   const user = await getUserById(rowUserId);
   if (!user) {
+    logEvent("token_refresh_rejected", {
+      requestId: requestId(res),
+      userId: payload.userId,
+      reason: "user_not_found",
+    });
     throw new HttpError(401, "Invalid refresh token");
   }
 
   await issueTokens(res, user);
+
+  logEvent("token_refresh", {
+    requestId: requestId(res),
+    user: user.username,
+  });
 
   res.status(200).json({ message: "Token refreshed" });
 };

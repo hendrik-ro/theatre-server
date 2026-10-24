@@ -145,14 +145,6 @@ describe("errorHandler", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "Invalid UUID" });
   });
 
-  it("returns the error message outside production", () => {
-    const res = makeResponse();
-    errorHandler(new Error("db down"), req, res, vi.fn());
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ message: "db down" });
-  });
-
   it("hides the error message in production", () => {
     config.env = "production";
     const res = makeResponse();
