@@ -19,34 +19,16 @@ const port = config.serverPort;
 
 const allowedOrigins = config.allowedOrigins.split(",").map((o) => o.trim());
 
-// Origin validation function for CORS.
-// Browser cross-origin requests ALWAYS include the Origin header and are
-// validated against allowedOrigins in production. Same-origin requests and
-// non-browser tools (Postman, curl) omit the Origin header and are allowed
-// through — this is safe because browsers cannot forge same-origin requests.
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // No Origin header: same-origin request or non-browser tool (Postman, curl)
-    // Browsers always send Origin for cross-origin requests, so missing Origin
-    // means the request is same-origin (trusted) or from a development tool.
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Cross-origin browser request: validate against allowed list in production
-    if (config.env === "production") {
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+const corsOptions: cors.CorsOptions =
+  config.env === "production"
+    ? {
+        origin: allowedOrigins,
+        credentials: true,
       }
-      console.warn(`CORS: Blocked cross-origin request from: ${origin}`);
-      return callback(new Error("Not allowed by CORS"));
-    }
-
-    // Development: allow all cross-origin requests
-    callback(null, true);
-  },
-  credentials: true,
-};
+    : {
+        origin: true,
+        credentials: true,
+      };
 
 app.use(
   helmet({
