@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { randomUUID } from "node:crypto";
 import express from "express";
 import helmet from "helmet";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -13,6 +14,7 @@ import movieRatingsRouter from "./routes/movieRatings.js";
 import { movies } from "./db/schema/movies.sql.js";
 import { count } from "drizzle-orm";
 import cors from "cors";
+import { logEvent } from "./logger.js";
 
 const app = express();
 const port = config.serverPort;
@@ -50,6 +52,35 @@ app.use(express.json({ limit: "16kb" }));
 // Attaches req.user from an access token when present; never rejects.
 // requireAuth enforces authentication per route.
 app.use(authenticateJWT);
+
+app.use((req, res, next) => {
+  // Health checks are high-frequency probes; logging them would evict
+  // every useful entry from the 200-line truncated log.
+  if (req.path === "/api/health") {
+    next();
+    return;
+  }
+
+  const requestId = randomUUID();
+  res.locals.requestId = requestId;
+  const start = Date.now();
+
+  // Log on finish so the status code and duration are known. The
+  // request body is deliberately not logged (credentials).
+  res.on("finish", () => {
+    logEvent("api", {
+      requestId,
+      path: req.path,
+      method: req.method,
+      status: res.statusCode,
+      durationMs: Date.now() - start,
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+      contentType: req.headers["content-type"],
+    });
+  });
+  next();
+});
 
 app.use("/api/movies", movieRouter);
 app.use("/api/users", userRouter);
