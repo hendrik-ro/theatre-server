@@ -131,15 +131,46 @@ describe("createMovie", () => {
 
 describe("getAllMovies", () => {
   it("returns an empty list when there are no movies", async () => {
-    expect(await getAllMovies()).toEqual([]);
+    expect(await getAllMovies(1, 20)).toEqual({
+      movies: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    });
   });
 
   it("returns all inserted movies", async () => {
     await createTestMovie();
     await createTestMovie({ name: "Sicario", year: 2015 });
 
-    const movies = await getAllMovies();
-    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
+    const movies = await getAllMovies(1, 20);
+    expect(movies.movies.map((m) => m.name).sort()).toEqual([
+      "Inception",
+      "Sicario",
+    ]);
+  });
+
+  it("pages through movies ordered by name", async () => {
+    await createTestMovie({ name: "Sicario" });
+    await createTestMovie({ name: "Arrival" });
+    await createTestMovie(); // Inception
+
+    // Ascending by name: Arrival, Inception, Sicario.
+    const firstPage = await getAllMovies(1, 2);
+    expect(firstPage.movies.map((m) => m.name)).toEqual([
+      "Arrival",
+      "Inception",
+    ]);
+    expect(firstPage.total).toBe(3);
+    expect(firstPage.totalPages).toBe(2);
+
+    const secondPage = await getAllMovies(2, 2);
+    expect(secondPage.movies.map((m) => m.name)).toEqual(["Sicario"]);
+    expect(secondPage.totalPages).toBe(2);
+
+    const pastEnd = await getAllMovies(5, 2);
+    expect(pastEnd.movies).toEqual([]);
   });
 
   it("returns the community average rounded to one decimal", async () => {
@@ -154,7 +185,9 @@ describe("getAllMovies", () => {
     await rateMovie(bob.id, inception.id, 9);
     await rateMovie(carol.id, inception.id, 8);
 
-    const rated = (await getAllMovies()).find((m) => m.name === "Inception");
+    const rated = (await getAllMovies(1, 20)).movies.find(
+      (m) => m.name === "Inception",
+    );
     expect(rated?.averageRating).toBe(8.7);
     expect(rated?.ratingCount).toBe(3);
     // pg returns numeric as a string; the query layer must convert it.
@@ -168,9 +201,12 @@ describe("getAllMovies", () => {
 
     await rateMovie(alice.id, inception.id, 7);
 
-    const movies = await getAllMovies();
-    expect(movies.map((m) => m.name).sort()).toEqual(["Inception", "Sicario"]);
-    const unrated = movies.find((m) => m.name === "Sicario");
+    const movies = await getAllMovies(1, 20);
+    expect(movies.movies.map((m) => m.name).sort()).toEqual([
+      "Inception",
+      "Sicario",
+    ]);
+    const unrated = movies.movies.find((m) => m.name === "Sicario");
     expect(unrated?.averageRating).toBeNull();
     expect(unrated?.ratingCount).toBe(0);
   });
@@ -238,8 +274,8 @@ describe("deleteMovie", () => {
 
     await deleteMovie(inception.id);
 
-    const movies = await getAllMovies();
-    expect(movies.map((m) => m.name)).toEqual(["Sicario"]);
+    const movies = await getAllMovies(1, 20);
+    expect(movies.movies.map((m) => m.name)).toEqual(["Sicario"]);
   });
 
   it("is a no-op for an unknown UUID", async () => {
@@ -247,7 +283,9 @@ describe("deleteMovie", () => {
 
     await deleteMovie("00000000-0000-0000-0000-000000000000");
 
-    expect((await getAllMovies()).map((m) => m.name)).toEqual(["Inception"]);
+    expect((await getAllMovies(1, 20)).movies.map((m) => m.name)).toEqual([
+      "Inception",
+    ]);
   });
 
   it("rejects a malformed UUID", async () => {

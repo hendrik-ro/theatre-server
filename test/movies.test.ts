@@ -27,7 +27,11 @@ import {
   moviesMetaData,
   moviesUpdateById,
 } from "../src/controllers/movies.js";
-import type { Movie, MoviesMeta } from "../src/models/movies.js";
+import type {
+  Movie,
+  MoviesMeta,
+  MoviesPaginated,
+} from "../src/models/movies.js";
 
 const movie: Movie = {
   id: "8fd27a76-dde8-41fb-8413-940aa9a2de21",
@@ -44,11 +48,13 @@ function makeRequest(
   overrides: {
     params?: Record<string, string>;
     body?: Record<string, unknown>;
+    query?: Record<string, string>;
   } = {},
 ): Request {
   return {
     params: overrides.params ?? {},
     body: overrides.body ?? {},
+    query: overrides.query ?? {},
   } as unknown as Request;
 }
 
@@ -66,8 +72,8 @@ beforeEach(() => {
 });
 
 describe("moviesGetAll", () => {
-  it("responds with all movies", async () => {
-    const movies = [
+  const page: MoviesPaginated = {
+    movies: [
       { ...movie, averageRating: null, ratingCount: 0 },
       {
         ...movie,
@@ -76,15 +82,44 @@ describe("moviesGetAll", () => {
         averageRating: null,
         ratingCount: 0,
       },
-    ];
-    vi.mocked(getAllMovies).mockResolvedValue(movies);
+    ],
+    page: 1,
+    limit: 20,
+    total: 2,
+    totalPages: 1,
+  };
+
+  it("responds with the paginated envelope, defaulting to page 1 of 20", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
 
     const res = makeResponse();
     await moviesGetAll(makeRequest(), res);
 
     expect(getAllMovies).toHaveBeenCalledOnce();
+    expect(getAllMovies).toHaveBeenCalledWith(1, 20);
     expect(res.status).not.toHaveBeenCalled();
-    expect(res.json).toHaveBeenCalledWith(movies);
+    expect(res.json).toHaveBeenCalledWith(page);
+  });
+
+  it("coerces pagination params from the query string", async () => {
+    const secondPage = { ...page, page: 2, limit: 5 };
+    vi.mocked(getAllMovies).mockResolvedValue(secondPage);
+
+    const res = makeResponse();
+    await moviesGetAll(makeRequest({ query: { page: "2", limit: "5" } }), res);
+
+    expect(getAllMovies).toHaveBeenCalledWith(2, 5);
+    expect(res.json).toHaveBeenCalledWith(secondPage);
+  });
+
+  it("rejects invalid query params without calling getAllMovies", async () => {
+    const res = makeResponse();
+    await expect(
+      moviesGetAll(makeRequest({ query: { limit: "101" } }), res),
+    ).rejects.toThrow(ZodError);
+
+    expect(getAllMovies).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 
   it("rejects on query errors", async () => {

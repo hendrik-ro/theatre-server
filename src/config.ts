@@ -36,9 +36,6 @@ export const config = {
   env: env.NODE_ENV,
   serverPort: env.SERVER_PORT,
   allowedOrigins: env.ALLOWED_ORIGINS,
-  // Assembled from the POSTGRES_* parts — one path for every context.
-  // Parts are encoded so URL-special characters in credentials stay
-  // valid.
   dbURL: `postgres://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}`,
   jwtSecret: env.JWT_SECRET,
   refreshSecret: env.REFRESH_SECRET,

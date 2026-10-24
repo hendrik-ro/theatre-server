@@ -4,6 +4,7 @@
 import jwt from "jsonwebtoken";
 import { config } from "../config.js";
 import { randomUUID } from "node:crypto";
+import { logEvent } from "../logger.js";
 
 // jwt.sign expects seconds; cookie maxAge expects milliseconds.
 export const JWT_CONFIG = {
@@ -46,15 +47,26 @@ export function signToken(payload: UserPayloadInput): string {
 // Verifies with the type's own secret and enforces the matching type
 // claim: an access token must never be accepted as a refresh token or
 // the other way around — each type only works on its own endpoints.
+// requestId (when available) correlates the event with the api log entry.
+// Expired tokens stay silent: TokenExpiredError subclasses
+// JsonWebTokenError, so it rethrows below without logging — expiry is
+// routine, not a security event.
 function verifyTypedToken(
   tokenType: "access" | "refresh",
   token: string,
+  requestId?: string,
 ): UserPayload {
   const secret =
     tokenType === "access" ? JWT_CONFIG.secret : JWT_CONFIG.refreshSecret;
   try {
     const payload = jwt.verify(token, secret) as UserPayload;
     if (payload.tokenType !== tokenType) {
+      logEvent("invalid_token", {
+        requestId,
+        tokenType,
+        presentedType: payload.tokenType,
+        reason: "token_type_mismatch",
+      });
       throw new jwt.JsonWebTokenError("Invalid token type");
     }
     return payload;
@@ -62,14 +74,25 @@ function verifyTypedToken(
     if (err instanceof jwt.JsonWebTokenError) {
       throw err;
     }
+    logEvent("invalid_token", {
+      requestId,
+      tokenType,
+      reason: "verification_failed",
+    });
     throw new jwt.JsonWebTokenError("Invalid token");
   }
 }
 
-export function verifyAccessToken(token: string): UserPayload {
-  return verifyTypedToken("access", token);
+export function verifyAccessToken(
+  token: string,
+  requestId?: string,
+): UserPayload {
+  return verifyTypedToken("access", token, requestId);
 }
 
-export function verifyRefreshToken(token: string): UserPayload {
-  return verifyTypedToken("refresh", token);
+export function verifyRefreshToken(
+  token: string,
+  requestId?: string,
+): UserPayload {
+  return verifyTypedToken("refresh", token, requestId);
 }

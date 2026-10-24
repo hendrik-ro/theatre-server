@@ -6,11 +6,17 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 
-const REDACTED_KEYS = new Set<string>([]);
+const REDACTED_KEYS = new Set<string>([
+  "password",
+  "passwordHash",
+  "token",
+  "refreshToken",
+  "email",
+]);
 
 type LogFields = Record<string, unknown>;
 
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES = 250;
 
 const logPath = join(process.cwd(), "data", "theatre-server.log");
 
@@ -41,16 +47,15 @@ function trimLog(): void {
 export function logEvent(eventName: string, fields: LogFields = {}): void {
   mkdirSync(dirname(logPath), { recursive: true });
 
-  console.log(fields);
+  const log = `${JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event: eventName,
+    ...redact(fields),
+  })}\n`;
 
-  appendFileSync(
-    logPath,
-    `${JSON.stringify({
-      timestamp: new Date().toISOString(),
-      event: eventName,
-      ...redact(fields),
-    })}\n`,
-  );
+  appendFileSync(logPath, log);
+
+  console.log(log);
 
   trimLog();
 }

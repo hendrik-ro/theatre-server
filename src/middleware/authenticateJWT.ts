@@ -13,7 +13,7 @@ const BEARER_PREFIX = "Bearer ";
 // expired token here simply falls through to a 401 from requireAuth.
 export function authenticateJWT(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
 ): void {
   let token: string | undefined;
@@ -33,7 +33,7 @@ export function authenticateJWT(
   }
 
   try {
-    const payload = verifyAccessToken(token);
+    const payload = verifyAccessToken(token, res.locals.requestId);
 
     if (!payload || !isUUID(payload.userId)) {
       next();

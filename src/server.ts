@@ -49,10 +49,9 @@ app.use(
 );
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "16kb" }));
-// Attaches req.user from an access token when present; never rejects.
-// requireAuth enforces authentication per route.
-app.use(authenticateJWT);
 
+// Mounted before authenticateJWT so token-verification events can
+// correlate with the request that caused them.
 app.use((req, res, next) => {
   // Health checks are high-frequency probes; logging them would evict
   // every useful entry from the 200-line truncated log.
@@ -82,6 +81,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Attaches req.user from an access token when present; never rejects.
+// requireAuth enforces authentication per route.
+app.use(authenticateJWT);
+
 app.use("/api/movies", movieRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
@@ -107,7 +110,11 @@ app.use(errorHandler);
 
 function startServer() {
   const server = app.listen(port, () => {
-    console.log(`Server listening on http://localhost:${port}`);
+    logEvent("server_start", {
+      port,
+      env: config.env,
+      node: process.version,
+    });
   });
 
   function shutdown(signal: NodeJS.Signals) {

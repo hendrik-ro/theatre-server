@@ -1,10 +1,8 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
-// Default import: jsonwebtoken's CJS named exports are not statically
-// detectable for raw Node ESM (see auth/jwt.ts).
 import jwt from "jsonwebtoken";
-import { config } from "../config.js";
 import { HttpError } from "../utils/errors.js";
+import { logEvent } from "../logger.js";
 
 const PG_UNIQUE_VIOLATION = "23505";
 
@@ -84,13 +82,13 @@ export const errorHandler: ErrorRequestHandler = (err, _, res, next) => {
     return;
   }
 
+  // console.error keeps the full stack for dev; the structured entry
+  // correlates the failure with its api log line via requestId.
   console.error(err);
+  logEvent("unhandled_error", {
+    requestId: res.locals?.requestId,
+    error: err instanceof Error ? err.message : String(err),
+  });
 
-  const message =
-    config.env === "production"
-      ? "Internal Server Error"
-      : err instanceof Error
-        ? err.message
-        : "Internal Server Error";
-  res.status(500).json({ message });
+  res.status(500).json({ message: "Internal Server Error" });
 };

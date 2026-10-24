@@ -1,9 +1,8 @@
 ## [1.6.2](https://github.com/hendrik-ro/theatre-server/compare/v1.6.1...v1.6.2) (2026-10-24)
 
-
 ### Bug Fixes
 
-* **logs:** added logger, logs volume ([3c0ba0d](https://github.com/hendrik-ro/theatre-server/commit/3c0ba0df61d9b531151f0f7ff8aa051bc01df23a))
+- **logs:** added logger, logs volume ([3c0ba0d](https://github.com/hendrik-ro/theatre-server/commit/3c0ba0df61d9b531151f0f7ff8aa051bc01df23a))
 
 ## [1.6.1](https://github.com/hendrik-ro/theatre-server/compare/v1.6.0...v1.6.1) (2026-10-24)
 
