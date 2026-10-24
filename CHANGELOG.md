@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/hendrik-ro/theatre-server/compare/v1.6.0...v1.6.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* content security policy + cors ([#11](https://github.com/hendrik-ro/theatre-server/issues/11)) ([54a983d](https://github.com/hendrik-ro/theatre-server/commit/54a983d46801e538291bf11d0dd35dd90c85b053))
+
 # [1.6.0](https://github.com/hendrik-ro/theatre-server/compare/v1.5.0...v1.6.0) (2026-10-22)
 
 ### Features
