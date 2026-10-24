@@ -48,8 +48,22 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
 };
 
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        frameSrc: ["'self'"],
+        upgradeInsecureRequests: null,
+      },
+    },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    xFrameOptions: { action: "sameorigin" },
+    strictTransportSecurity: false,
+  }),
+);
 app.use(cors(corsOptions));
-app.use(helmet());
 app.use(express.json({ limit: "16kb" }));
 // Attaches req.user from an access token when present; never rejects.
 // requireAuth enforces authentication per route.
