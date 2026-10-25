@@ -392,23 +392,35 @@ describe("getAllMovies", () => {
       expect(result.total).toBe(1);
     });
 
-    it("filters movies by imdbRating=0", async () => {
+    it("filters movies by imdbRating=0 (gte behavior)", async () => {
       await createTestMovie({ name: "Zero IMDb", imdbRating: 0 });
       await createTestMovie({ name: "Normal IMDb", imdbRating: 7.5 });
 
+      // With gte, filtering by 0 returns all movies since all ratings >= 0
       const result = await getAllMovies(1, 20, { imdbRating: 0 });
-      expect(result.movies.map((m) => m.name)).toEqual(["Zero IMDb"]);
-      expect(result.total).toBe(1);
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Normal IMDb",
+        "Zero IMDb",
+      ]);
+      expect(result.total).toBe(2);
     });
 
-    it("filters movies by averageRating=0", async () => {
+    it("filters movies by averageRating=0 (gte behavior)", async () => {
       const alice = await createUser("alice", "a@example.com", "hash1");
-      const movie = await createTestMovie({ name: "Zero Rated" });
-      await rateMovie(alice.id, movie.id, 0);
+      const zeroRated = await createTestMovie({ name: "Zero Rated" });
+      await rateMovie(alice.id, zeroRated.id, 0);
+
+      // With gte, filtering by 0 returns all movies since all ratings >= 0
+      // Create another rated movie to verify
+      const normalRated = await createTestMovie({ name: "Normal Rated" });
+      await rateMovie(alice.id, normalRated.id, 5);
 
       const result = await getAllMovies(1, 20, { averageRating: 0 });
-      expect(result.movies.map((m) => m.name)).toEqual(["Zero Rated"]);
-      expect(result.total).toBe(1);
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Normal Rated",
+        "Zero Rated",
+      ]);
+      expect(result.total).toBe(2);
     });
 
     // === Edge Case Tests: Null Values ===
@@ -492,14 +504,20 @@ describe("getAllMovies", () => {
       expect(result.movies[0].name).toBe("All Edge");
 
       result = await getAllMovies(1, 20, { imdbRating: 0 });
-      expect(result.movies.length).toBe(1);
-      expect(result.movies[0].name).toBe("All Edge");
+      // With gte, filtering by 0 returns all movies since all ratings >= 0
+      expect(result.movies.length).toBe(3);
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "All Edge",
+        "Normal",
+        "Partial",
+      ]);
 
       result = await getAllMovies(1, 20, {
         year: 0,
         genre: null,
         imdbRating: 0,
       });
+      // With gte, filtering by imdbRating: 0 returns all, but year: 0 and genre: null filter to just "All Edge"
       expect(result.movies.length).toBe(1);
       expect(result.movies[0].name).toBe("All Edge");
     });
