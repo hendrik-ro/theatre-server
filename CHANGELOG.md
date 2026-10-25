@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/hendrik-ro/theatre-server/compare/v2.0.0...v2.0.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **pagination:** added filters to db query ([95ee8c0](https://github.com/hendrik-ro/theatre-server/commit/95ee8c006d6393fe5138a7a38a4f2b32792b1689))
+
 # [2.0.0](https://github.com/hendrik-ro/theatre-server/compare/v1.6.2...v2.0.0) (2026-10-24)
 
 ### Features
