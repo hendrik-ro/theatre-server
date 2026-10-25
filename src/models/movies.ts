@@ -34,10 +34,10 @@ export interface MoviesMeta {
 
 export const movieInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  year: z.number().int().min(1750).max(MAX_YEAR).optional(),
-  runtime: z.number().int().min(1).max(9999).optional(),
-  imdbRating: z.number().min(0).max(10).optional(),
-  genre: z.string().trim().min(1).max(100).optional(),
+  year: z.number().int().min(1750).max(MAX_YEAR).optional().nullable(),
+  runtime: z.number().int().min(1).max(9999).optional().nullable(),
+  imdbRating: z.number().min(0).max(10).optional().nullable(),
+  genre: z.string().trim().min(1).max(100).optional().nullable(),
 });
 
 export const moviePaginationQuery = z.object({
