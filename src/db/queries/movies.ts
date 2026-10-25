@@ -1,4 +1,13 @@
-import { eq, count, asc, desc, getTableColumns, sql } from "drizzle-orm";
+import {
+  eq,
+  count,
+  asc,
+  desc,
+  getTableColumns,
+  sql,
+  like,
+  and,
+} from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
 import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
@@ -44,6 +53,28 @@ interface Pagination {
   limit: number;
 }
 
+interface Filter {
+  year?: number;
+  genre?: string;
+  averageRating?: number;
+  imdbRating?: number;
+}
+
+function buildFilterConditions(filter?: Filter) {
+  const averages = ratingAverages();
+  const whereConditions = [];
+
+  if (filter?.year) whereConditions.push(eq(movies.year, filter.year));
+  if (filter?.genre)
+    whereConditions.push(like(movies.genre, `%${filter.genre}%`));
+  if (filter?.averageRating)
+    whereConditions.push(eq(averages.average, filter.averageRating.toString()));
+  if (filter?.imdbRating)
+    whereConditions.push(eq(movies.imdbRating, filter.imdbRating));
+
+  return whereConditions;
+}
+
 function selectAllMoviesWithRatings(pagination?: Pagination) {
   const averages = ratingAverages();
   const selection = db
@@ -64,9 +95,24 @@ function selectAllMoviesWithRatings(pagination?: Pagination) {
 export async function getAllMovies(
   page: number,
   limit: number,
+  filter?: Filter,
 ): Promise<MoviesPaginated> {
-  const [total] = await db.select({ count: count() }).from(movies);
+  const whereConditions = buildFilterConditions(filter);
+  const averages = ratingAverages();
+
+  const countSelection = db
+    .select({ count: count() })
+    .from(movies)
+    .leftJoin(averages, eq(averages.movieId, movies.id));
+
+  const countSelectionWithFilters =
+    whereConditions.length > 0
+      ? countSelection.where(and(...whereConditions))
+      : countSelection;
+
+  const [total] = await countSelectionWithFilters;
   const rows = await selectAllMoviesWithRatings({ page, limit });
+
   return {
     movies: rows.map(toMovieWithRatings),
     page,
