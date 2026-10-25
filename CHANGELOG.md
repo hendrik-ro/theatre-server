@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/hendrik-ro/theatre-server/compare/v2.0.1...v2.0.2) (2026-10-25)
+
+
+### Bug Fixes
+
+* **movies:** filter interface null | unknown ([498679e](https://github.com/hendrik-ro/theatre-server/commit/498679ea97cb32d939f3dc839d8e9eafdae806a8))
+
 ## [2.0.1](https://github.com/hendrik-ro/theatre-server/compare/v2.0.0...v2.0.1) (2026-10-25)
 
 ### Bug Fixes
