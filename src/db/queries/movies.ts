@@ -60,10 +60,10 @@ function toMovieWithRatings(
 }
 
 interface Filter {
-  year?: number;
-  genre?: string;
-  averageRating?: number;
-  imdbRating?: number;
+  year?: number | null | undefined;
+  genre?: string | null | undefined;
+  averageRating?: number | null | undefined;
+  imdbRating?: number | null | undefined;
 }
 
 function buildFilterConditions(
@@ -72,12 +72,13 @@ function buildFilterConditions(
 ) {
   const whereConditions = [];
 
-  if (filter?.year) whereConditions.push(eq(movies.year, filter.year));
-  if (filter?.genre)
+  if (filter?.year !== undefined && filter?.year !== null)
+    whereConditions.push(eq(movies.year, filter.year));
+  if (filter?.genre !== undefined && filter?.genre !== null)
     whereConditions.push(like(movies.genre, `%${filter.genre}%`));
-  if (filter?.averageRating)
+  if (filter?.averageRating !== undefined && filter?.averageRating !== null)
     whereConditions.push(eq(averages.average, filter.averageRating));
-  if (filter?.imdbRating)
+  if (filter?.imdbRating !== undefined && filter?.imdbRating !== null)
     whereConditions.push(eq(movies.imdbRating, filter.imdbRating));
 
   return whereConditions;

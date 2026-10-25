@@ -96,7 +96,7 @@ describe("moviesGetAll", () => {
     await moviesGetAll(makeRequest(), res);
 
     expect(getAllMovies).toHaveBeenCalledOnce();
-    expect(getAllMovies).toHaveBeenCalledWith(1, 20);
+    expect(getAllMovies).toHaveBeenCalledWith(1, 20, {});
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(page);
   });
@@ -108,7 +108,7 @@ describe("moviesGetAll", () => {
     const res = makeResponse();
     await moviesGetAll(makeRequest({ query: { page: "2", limit: "5" } }), res);
 
-    expect(getAllMovies).toHaveBeenCalledWith(2, 5);
+    expect(getAllMovies).toHaveBeenCalledWith(2, 5, {});
     expect(res.json).toHaveBeenCalledWith(secondPage);
   });
 

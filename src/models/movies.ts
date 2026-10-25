@@ -45,4 +45,11 @@ export const moviePaginationQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const movieFilterSchema = z.object({
+  year: z.coerce.number().int().min(1750).optional().nullable(),
+  genre: z.string().optional().nullable(),
+  averageRating: z.coerce.number().min(0).max(10).optional().nullable(),
+  imdbRating: z.coerce.number().min(0).max(10).optional().nullable(),
+});
+
 export type MovieInput = z.infer<typeof movieInputSchema>;

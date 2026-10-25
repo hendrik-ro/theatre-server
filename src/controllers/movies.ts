@@ -8,6 +8,7 @@ import {
 import {
   Movie,
   MoviesMeta,
+  movieFilterSchema,
   movieInputSchema,
   moviePaginationQuery,
 } from "../models/movies.js";
@@ -15,7 +16,9 @@ import type { AsyncRequestHandler } from "../utils/asyncHandler.js";
 
 export const moviesGetAll: AsyncRequestHandler = async (req, res) => {
   const { page, limit } = moviePaginationQuery.parse(req.query);
-  const result = await getAllMovies(page, limit);
+  const filter = movieFilterSchema.parse(req.query);
+
+  const result = await getAllMovies(page, limit, filter);
   res.json(result);
 };
 
