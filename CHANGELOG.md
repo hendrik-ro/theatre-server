@@ -1,15 +1,13 @@
 # [2.0.0](https://github.com/hendrik-ro/theatre-server/compare/v1.6.2...v2.0.0) (2026-10-24)
 
-
 ### Features
 
-* **logs:** extended logging ([e371a60](https://github.com/hendrik-ro/theatre-server/commit/e371a603110717a6de51dd146585f0b06412dd59))
-* **movies:** paginated movie results ([a8dc6cd](https://github.com/hendrik-ro/theatre-server/commit/a8dc6cd88f8c60decf7ec43a99f619310bfd1acf))
-
+- **logs:** extended logging ([e371a60](https://github.com/hendrik-ro/theatre-server/commit/e371a603110717a6de51dd146585f0b06412dd59))
+- **movies:** paginated movie results ([a8dc6cd](https://github.com/hendrik-ro/theatre-server/commit/a8dc6cd88f8c60decf7ec43a99f619310bfd1acf))
 
 ### BREAKING CHANGES
 
-* **movies:** GET /api/movies now returns a paginated envelope, breaks API contract for client
+- **movies:** GET /api/movies now returns a paginated envelope, breaks API contract for client
 
 ## [1.6.2](https://github.com/hendrik-ro/theatre-server/compare/v1.6.1...v1.6.2) (2026-10-24)
 

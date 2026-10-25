@@ -210,6 +210,177 @@ describe("getAllMovies", () => {
     expect(unrated?.averageRating).toBeNull();
     expect(unrated?.ratingCount).toBe(0);
   });
+
+  // === Filter Tests ===
+
+  describe("filtering", () => {
+    it("filters movies by year", async () => {
+      await createTestMovie({
+        name: "Movie 1999",
+        year: 1999,
+        genre: "sci-fi",
+      });
+      await createTestMovie({
+        name: "Movie 2001",
+        year: 2001,
+        genre: "sci-fi",
+      });
+      await createTestMovie({ name: "Movie 2010", year: 2010, genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { year: 2010 });
+      expect(result.movies.map((m) => m.name)).toEqual(["Movie 2010"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by genre with partial matching (LIKE)", async () => {
+      await createTestMovie({ name: "Inception", genre: "science-fiction" });
+      await createTestMovie({ name: "Interstellar", genre: "sci-fi" });
+      await createTestMovie({ name: "Titanic", genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { genre: "sci" });
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Inception",
+        "Interstellar",
+      ]);
+      expect(result.total).toBe(2);
+    });
+
+    it("filters movies by imdbRating", async () => {
+      await createTestMovie({ name: "High", imdbRating: 9.0 });
+      await createTestMovie({ name: "Mid", imdbRating: 7.5 });
+      await createTestMovie({ name: "Low", imdbRating: 6.0 });
+
+      const result = await getAllMovies(1, 20, { imdbRating: 9.0 });
+      expect(result.movies.map((m) => m.name)).toEqual(["High"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by averageRating", async () => {
+      const alice = await createUser("alice", "a@example.com", "hash1");
+      const bob = await createUser("bob", "b@example.com", "hash2");
+
+      const highRated = await createTestMovie({
+        name: "High",
+        imdbRating: 8.0,
+      });
+      const lowRated = await createTestMovie({ name: "Low", imdbRating: 6.0 });
+
+      await rateMovie(alice.id, highRated.id, 9);
+      await rateMovie(bob.id, highRated.id, 9);
+      await rateMovie(alice.id, lowRated.id, 7);
+
+      const result = await getAllMovies(1, 20, { averageRating: 9 });
+      expect(result.movies.map((m) => m.name)).toEqual(["High"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("applies multiple filters with AND logic", async () => {
+      await createTestMovie({
+        name: "Match",
+        year: 2010,
+        genre: "sci-fi",
+        imdbRating: 8.5,
+      });
+      await createTestMovie({
+        name: "Wrong Year",
+        year: 2000,
+        genre: "sci-fi",
+        imdbRating: 8.5,
+      });
+      await createTestMovie({
+        name: "Wrong Genre",
+        year: 2010,
+        genre: "drama",
+        imdbRating: 8.5,
+      });
+      await createTestMovie({
+        name: "Wrong Rating",
+        year: 2010,
+        genre: "sci-fi",
+        imdbRating: 7.0,
+      });
+
+      const result = await getAllMovies(1, 20, {
+        year: 2010,
+        genre: "sci-fi",
+        imdbRating: 8.5,
+      });
+      expect(result.movies.map((m) => m.name)).toEqual(["Match"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters by genre and averageRating combined", async () => {
+      const alice = await createUser("alice", "a@example.com", "hash1");
+      const bob = await createUser("bob", "b@example.com", "hash2");
+
+      const sciFiRated = await createTestMovie({
+        name: "Sci-Fi High",
+        genre: "sci-fi",
+      });
+      const dramaRated = await createTestMovie({
+        name: "Drama High",
+        genre: "drama",
+      });
+
+      await rateMovie(alice.id, sciFiRated.id, 9);
+      await rateMovie(bob.id, sciFiRated.id, 9);
+      await rateMovie(alice.id, dramaRated.id, 9);
+      await rateMovie(bob.id, dramaRated.id, 9);
+
+      const result = await getAllMovies(1, 20, {
+        genre: "sci-fi",
+        averageRating: 9,
+      });
+      expect(result.movies.map((m) => m.name)).toEqual(["Sci-Fi High"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("returns all movies when filter is undefined", async () => {
+      await createTestMovie({ name: "Movie 1" });
+      await createTestMovie({ name: "Movie 2" });
+
+      const result = await getAllMovies(1, 20, undefined);
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Movie 1",
+        "Movie 2",
+      ]);
+      expect(result.total).toBe(2);
+    });
+
+    it("returns all movies when filter is empty object", async () => {
+      await createTestMovie({ name: "Movie 1" });
+      await createTestMovie({ name: "Movie 2" });
+
+      const result = await getAllMovies(1, 20, {});
+      expect(result.movies.length).toBe(2);
+    });
+
+    it("returns empty array when no movies match filter", async () => {
+      await createTestMovie({ name: "Movie", year: 2000 });
+
+      const result = await getAllMovies(1, 20, { year: 1990 });
+      expect(result.movies).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
+    });
+
+    it("applies filter with pagination", async () => {
+      for (let i = 1; i <= 5; i++) {
+        await createTestMovie({ name: `Sci-Fi ${i}`, genre: "sci-fi" });
+      }
+      for (let i = 1; i <= 3; i++) {
+        await createTestMovie({ name: `Drama ${i}`, genre: "drama" });
+      }
+
+      const page1 = await getAllMovies(1, 2, { genre: "sci-fi" });
+      expect(page1.movies.map((m) => m.name)).toEqual(["Sci-Fi 1", "Sci-Fi 2"]);
+      expect(page1.total).toBe(5);
+      expect(page1.totalPages).toBe(3);
+
+      const page2 = await getAllMovies(2, 2, { genre: "sci-fi" });
+      expect(page2.movies.map((m) => m.name)).toEqual(["Sci-Fi 3", "Sci-Fi 4"]);
+    });
+  });
 });
 
 describe("getMovieById", () => {
