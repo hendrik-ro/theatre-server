@@ -7,6 +7,7 @@ import {
   sql,
   like,
   and,
+  isNull,
 } from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
@@ -60,10 +61,10 @@ function toMovieWithRatings(
 }
 
 interface Filter {
-  year?: number;
-  genre?: string;
-  averageRating?: number;
-  imdbRating?: number;
+  year?: number | null | undefined;
+  genre?: string | null | undefined;
+  averageRating?: number | null | undefined;
+  imdbRating?: number | null | undefined;
 }
 
 function buildFilterConditions(
@@ -72,13 +73,32 @@ function buildFilterConditions(
 ) {
   const whereConditions = [];
 
-  if (filter?.year) whereConditions.push(eq(movies.year, filter.year));
-  if (filter?.genre)
-    whereConditions.push(like(movies.genre, `%${filter.genre}%`));
-  if (filter?.averageRating)
-    whereConditions.push(eq(averages.average, filter.averageRating));
-  if (filter?.imdbRating)
-    whereConditions.push(eq(movies.imdbRating, filter.imdbRating));
+  if (filter?.year !== undefined) {
+    whereConditions.push(
+      filter.year === null ? isNull(movies.year) : eq(movies.year, filter.year),
+    );
+  }
+  if (filter?.genre !== undefined) {
+    whereConditions.push(
+      filter.genre === null
+        ? isNull(movies.genre)
+        : like(movies.genre, `%${filter.genre}%`),
+    );
+  }
+  if (filter?.averageRating !== undefined) {
+    whereConditions.push(
+      filter.averageRating === null
+        ? isNull(averages.average)
+        : eq(averages.average, filter.averageRating),
+    );
+  }
+  if (filter?.imdbRating !== undefined) {
+    whereConditions.push(
+      filter.imdbRating === null
+        ? isNull(movies.imdbRating)
+        : eq(movies.imdbRating, filter.imdbRating),
+    );
+  }
 
   return whereConditions;
 }

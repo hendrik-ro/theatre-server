@@ -34,15 +34,22 @@ export interface MoviesMeta {
 
 export const movieInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  year: z.number().int().min(1750).max(MAX_YEAR).optional(),
-  runtime: z.number().int().min(1).max(9999).optional(),
-  imdbRating: z.number().min(0).max(10).optional(),
-  genre: z.string().trim().min(1).max(100).optional(),
+  year: z.number().int().min(1750).max(MAX_YEAR).optional().nullable(),
+  runtime: z.number().int().min(1).max(9999).optional().nullable(),
+  imdbRating: z.number().min(0).max(10).optional().nullable(),
+  genre: z.string().trim().min(1).max(100).optional().nullable(),
 });
 
 export const moviePaginationQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const movieFilterSchema = z.object({
+  year: z.coerce.number().int().min(1750).optional().nullable(),
+  genre: z.string().optional().nullable(),
+  averageRating: z.coerce.number().min(0).max(10).optional().nullable(),
+  imdbRating: z.coerce.number().min(0).max(10).optional().nullable(),
 });
 
 export type MovieInput = z.infer<typeof movieInputSchema>;

@@ -168,7 +168,7 @@ movie queries — rather than denormalized into storage.
 
 ## Testing
 
-Over 150 integration and unit tests (Vitest + supertest) run against a
+Over 170 integration and unit tests (Vitest + supertest) run against a
 real PostgreSQL database — a service container in CI, and a local
 database in development. The suite covers the API surface end to end:
 auth flows and refresh rotation, RBAC on every guarded route, CRUD on

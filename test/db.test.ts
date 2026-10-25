@@ -380,6 +380,129 @@ describe("getAllMovies", () => {
       const page2 = await getAllMovies(2, 2, { genre: "sci-fi" });
       expect(page2.movies.map((m) => m.name)).toEqual(["Sci-Fi 3", "Sci-Fi 4"]);
     });
+
+    // === Edge Case Tests: Zero Values ===
+
+    it("filters movies by year=0", async () => {
+      await createTestMovie({ name: "Year Zero", year: 0, genre: "drama" });
+      await createTestMovie({ name: "Year 1990", year: 1990, genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { year: 0 });
+      expect(result.movies.map((m) => m.name)).toEqual(["Year Zero"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by imdbRating=0", async () => {
+      await createTestMovie({ name: "Zero IMDb", imdbRating: 0 });
+      await createTestMovie({ name: "Normal IMDb", imdbRating: 7.5 });
+
+      const result = await getAllMovies(1, 20, { imdbRating: 0 });
+      expect(result.movies.map((m) => m.name)).toEqual(["Zero IMDb"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by averageRating=0", async () => {
+      const alice = await createUser("alice", "a@example.com", "hash1");
+      const movie = await createTestMovie({ name: "Zero Rated" });
+      await rateMovie(alice.id, movie.id, 0);
+
+      const result = await getAllMovies(1, 20, { averageRating: 0 });
+      expect(result.movies.map((m) => m.name)).toEqual(["Zero Rated"]);
+      expect(result.total).toBe(1);
+    });
+
+    // === Edge Case Tests: Null Values ===
+
+    it("filters movies by null year", async () => {
+      await createTestMovie({ name: "No Year", year: null, genre: "drama" });
+      await createTestMovie({ name: "Has Year", year: 2000, genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { year: null });
+      expect(result.movies.map((m) => m.name)).toEqual(["No Year"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by null genre", async () => {
+      await createTestMovie({ name: "No Genre", genre: null });
+      await createTestMovie({ name: "Has Genre", genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { genre: null });
+      expect(result.movies.map((m) => m.name)).toEqual(["No Genre"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by null averageRating (unrated)", async () => {
+      await createTestMovie({ name: "Unrated", genre: "drama" });
+      const rated = await createTestMovie({ name: "Rated", genre: "drama" });
+      const user = await createUser("user", "u@example.com", "hash");
+      await rateMovie(user.id, rated.id, 5);
+
+      const result = await getAllMovies(1, 20, { averageRating: null });
+      expect(result.movies.map((m) => m.name)).toEqual(["Unrated"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("filters movies by null imdbRating", async () => {
+      await createTestMovie({ name: "No IMDb", imdbRating: null });
+      await createTestMovie({ name: "Has IMDb", imdbRating: 7.5 });
+
+      const result = await getAllMovies(1, 20, { imdbRating: null });
+      expect(result.movies.map((m) => m.name)).toEqual(["No IMDb"]);
+      expect(result.total).toBe(1);
+    });
+
+    // === Edge Case Tests: Combined ===
+
+    it("filters by year=0 AND genre=null", async () => {
+      await createTestMovie({ name: "Match", year: 0, genre: null });
+      await createTestMovie({ name: "Wrong Year", year: 2000, genre: null });
+      await createTestMovie({ name: "Wrong Genre", year: 0, genre: "drama" });
+
+      const result = await getAllMovies(1, 20, { year: 0, genre: null });
+      expect(result.movies.map((m) => m.name)).toEqual(["Match"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("handles mixed null and zero values together", async () => {
+      await createTestMovie({
+        name: "All Edge",
+        year: 0,
+        genre: null,
+        imdbRating: 0,
+      });
+      await createTestMovie({
+        name: "Normal",
+        year: 2000,
+        genre: "drama",
+        imdbRating: 7.5,
+      });
+      await createTestMovie({
+        name: "Partial",
+        year: null,
+        genre: "sci-fi",
+        imdbRating: 8.0,
+      });
+
+      let result = await getAllMovies(1, 20, { year: 0 });
+      expect(result.movies.length).toBe(1);
+      expect(result.movies[0].name).toBe("All Edge");
+
+      result = await getAllMovies(1, 20, { genre: null });
+      expect(result.movies.length).toBe(1);
+      expect(result.movies[0].name).toBe("All Edge");
+
+      result = await getAllMovies(1, 20, { imdbRating: 0 });
+      expect(result.movies.length).toBe(1);
+      expect(result.movies[0].name).toBe("All Edge");
+
+      result = await getAllMovies(1, 20, {
+        year: 0,
+        genre: null,
+        imdbRating: 0,
+      });
+      expect(result.movies.length).toBe(1);
+      expect(result.movies[0].name).toBe("All Edge");
+    });
   });
 });
 
