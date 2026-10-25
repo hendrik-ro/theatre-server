@@ -29,7 +29,7 @@ function ratingAverages() {
   return db
     .select({
       movieId: movieRatings.movieId,
-      average: sql<string>`ROUND(AVG(${movieRatings.rating}), 1)`.as("average"),
+      average: sql<number>`ROUND(AVG(${movieRatings.rating}), 1)`.as("average"),
       count: count().as("count"),
     })
     .from(movieRatings)
@@ -38,19 +38,25 @@ function ratingAverages() {
 }
 
 function toMovieWithRatings(
-  row: Awaited<ReturnType<typeof selectAllMoviesWithRatings>>[number],
+  row: Movie & {
+    averageRating: string | number | null;
+    ratingCount: number | null;
+  },
 ): MovieWithRatings {
+  // Handle averageRating: null -> null, NaN -> 0
+  let averageRating: number | null = null;
+  if (row.averageRating !== null) {
+    const num =
+      typeof row.averageRating === "string"
+        ? Number(row.averageRating)
+        : row.averageRating;
+    averageRating = Number.isNaN(num) ? 0 : num;
+  }
   return {
     ...row,
-    averageRating:
-      row.averageRating === null ? null : Number(row.averageRating),
+    averageRating,
     ratingCount: row.ratingCount ?? 0,
   };
-}
-
-interface Pagination {
-  page: number;
-  limit: number;
 }
 
 interface Filter {
@@ -70,28 +76,11 @@ function buildFilterConditions(
   if (filter?.genre)
     whereConditions.push(like(movies.genre, `%${filter.genre}%`));
   if (filter?.averageRating)
-    whereConditions.push(eq(averages.average, filter.averageRating.toString()));
+    whereConditions.push(eq(averages.average, filter.averageRating));
   if (filter?.imdbRating)
     whereConditions.push(eq(movies.imdbRating, filter.imdbRating));
 
   return whereConditions;
-}
-
-function selectAllMoviesWithRatings(pagination?: Pagination) {
-  const averages = ratingAverages();
-  const selection = db
-    .select({
-      ...getTableColumns(movies),
-      averageRating: averages.average,
-      ratingCount: averages.count,
-    })
-    .from(movies)
-    .leftJoin(averages, eq(averages.movieId, movies.id));
-  if (!pagination) return selection;
-  return selection
-    .orderBy(asc(movies.name))
-    .limit(pagination.limit)
-    .offset((pagination.page - 1) * pagination.limit);
 }
 
 export async function getAllMovies(
@@ -142,11 +131,18 @@ export async function getAllMovies(
   };
 }
 
-export async function getMovieById(
-  id: string,
-): Promise<MovieWithRatings | undefined> {
+export async function getMovieById(id: string) {
   if (!isUUID(id)) return undefined;
-  const rows = await selectAllMoviesWithRatings().where(eq(movies.id, id));
+  const averages = ratingAverages();
+  const rows = await db
+    .select({
+      ...getTableColumns(movies),
+      averageRating: averages.average,
+      ratingCount: averages.count,
+    })
+    .from(movies)
+    .leftJoin(averages, eq(averages.movieId, movies.id))
+    .where(eq(movies.id, id));
   return firstOrUndefined(rows.map(toMovieWithRatings));
 }
 
