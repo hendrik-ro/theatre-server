@@ -8,6 +8,7 @@ import {
   like,
   and,
   isNull,
+  gte,
 } from "drizzle-orm";
 import { db } from "../index.js";
 import { movies } from "../schema/movies.sql.js";
@@ -89,14 +90,14 @@ function buildFilterConditions(
     whereConditions.push(
       filter.averageRating === null
         ? isNull(averages.average)
-        : eq(averages.average, filter.averageRating),
+        : gte(averages.average, filter.averageRating),
     );
   }
   if (filter?.imdbRating !== undefined) {
     whereConditions.push(
       filter.imdbRating === null
         ? isNull(movies.imdbRating)
-        : eq(movies.imdbRating, filter.imdbRating),
+        : gte(movies.imdbRating, filter.imdbRating),
     );
   }
 
