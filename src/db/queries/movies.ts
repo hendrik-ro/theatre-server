@@ -60,8 +60,10 @@ interface Filter {
   imdbRating?: number;
 }
 
-function buildFilterConditions(filter?: Filter) {
-  const averages = ratingAverages();
+function buildFilterConditions(
+  averages: ReturnType<typeof ratingAverages>,
+  filter?: Filter,
+) {
   const whereConditions = [];
 
   if (filter?.year) whereConditions.push(eq(movies.year, filter.year));
@@ -97,8 +99,8 @@ export async function getAllMovies(
   limit: number,
   filter?: Filter,
 ): Promise<MoviesPaginated> {
-  const whereConditions = buildFilterConditions(filter);
   const averages = ratingAverages();
+  const whereConditions = buildFilterConditions(averages, filter);
 
   const countSelection = db
     .select({ count: count() })
@@ -111,7 +113,25 @@ export async function getAllMovies(
       : countSelection;
 
   const [total] = await countSelectionWithFilters;
-  const rows = await selectAllMoviesWithRatings({ page, limit });
+
+  const dataSelection = db
+    .select({
+      ...getTableColumns(movies),
+      averageRating: averages.average,
+      ratingCount: averages.count,
+    })
+    .from(movies)
+    .leftJoin(averages, eq(averages.movieId, movies.id))
+    .orderBy(asc(movies.name))
+    .limit(limit)
+    .offset((page - 1) * limit);
+
+  const dataSelectionWithFilters =
+    whereConditions.length > 0
+      ? dataSelection.where(and(...whereConditions))
+      : dataSelection;
+
+  const rows = await dataSelectionWithFilters;
 
   return {
     movies: rows.map(toMovieWithRatings),
