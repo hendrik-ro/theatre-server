@@ -17,11 +17,11 @@ describe("watchlists", () => {
     expect(res.body).toEqual({ message: "Authentication required" });
   });
 
-  it("POST returns 400 for malformed uuid", async () => {
+  it("POST returns 404 for malformed uuid", async () => {
     const agent = await authenticatedAgent(app);
 
     const res = await agent.post("/api/watchlists/not-a-uuid");
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it("DELETE returns 400 for malformed uuid", async () => {

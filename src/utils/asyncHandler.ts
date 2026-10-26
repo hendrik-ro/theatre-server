@@ -9,7 +9,7 @@ export type AsyncRequestHandler = (
   req: Request,
   res: Response,
   next?: NextFunction,
-) => Promise<unknown>;
+) => Promise<void>;
 
 export function asyncHandler(handler: AsyncRequestHandler): RequestHandler {
   return (req, res, next) => {

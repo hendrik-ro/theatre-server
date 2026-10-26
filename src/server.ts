@@ -15,6 +15,7 @@ import { movies } from "./db/schema/movies.sql.js";
 import { count } from "drizzle-orm";
 import cors from "cors";
 import { logEvent } from "./logger.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
 
 const app = express();
 const port = config.serverPort;
@@ -81,16 +82,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Attaches req.user from an access token when present; never rejects.
-// requireAuth enforces authentication per route.
-app.use(authenticateJWT);
-
-app.use("/api/movies", movieRouter);
-app.use("/api/users", userRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/watchlists", watchlistsRouter);
-app.use("/api/ratings", movieRatingsRouter);
-
 app.get("/api/health", async (_req, res) => {
   try {
     await db.select({ count: count() }).from(movies);
@@ -99,6 +90,16 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ status: "error", db: "disconnected" });
   }
 });
+
+// Attaches req.user from an access token when present; never rejects.
+// requireAuth enforces authentication per route.
+app.use(asyncHandler(authenticateJWT));
+
+app.use("/api/movies", movieRouter);
+app.use("/api/users", userRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/watchlists", watchlistsRouter);
+app.use("/api/ratings", movieRatingsRouter);
 
 // JSON 404 for unknown /api routes
 // Express would otherwise send its HTML page
