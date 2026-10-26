@@ -1,11 +1,10 @@
 ## [2.0.4](https://github.com/hendrik-ro/theatre-server/compare/v2.0.3...v2.0.4) (2026-10-26)
 
-
 ### Bug Fixes
 
-* **models:** calculate movie max year dynamically ([a04fe5e](https://github.com/hendrik-ro/theatre-server/commit/a04fe5e34c8f110c8f167903f27bce0eb8fe2231))
-* **movies:** preprocess filters 'null' -> null ([2a14893](https://github.com/hendrik-ro/theatre-server/commit/2a1489354c966f290642afd9aa8b36aa771fdac8))
-* rm race condition authenticateJWT, watchlistsAddMovie 400 -> 404, usersRefresh check cookies ([dfff25f](https://github.com/hendrik-ro/theatre-server/commit/dfff25f38491485181c63ebd64d837eeb7072a09))
+- **models:** calculate movie max year dynamically ([a04fe5e](https://github.com/hendrik-ro/theatre-server/commit/a04fe5e34c8f110c8f167903f27bce0eb8fe2231))
+- **movies:** preprocess filters 'null' -> null ([2a14893](https://github.com/hendrik-ro/theatre-server/commit/2a1489354c966f290642afd9aa8b36aa771fdac8))
+- rm race condition authenticateJWT, watchlistsAddMovie 400 -> 404, usersRefresh check cookies ([dfff25f](https://github.com/hendrik-ro/theatre-server/commit/dfff25f38491485181c63ebd64d837eeb7072a09))
 
 ## [2.0.3](https://github.com/hendrik-ro/theatre-server/compare/v2.0.2...v2.0.3) (2026-10-25)
 

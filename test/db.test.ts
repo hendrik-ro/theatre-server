@@ -131,7 +131,9 @@ describe("createMovie", () => {
 
 describe("getAllMovies", () => {
   it("returns an empty list when there are no movies", async () => {
-    expect(await getAllMovies(1, 20)).toEqual({
+    expect(
+      await getAllMovies(1, 20, {}, { sortBy: "year", sortDir: "asc" }),
+    ).toEqual({
       movies: [],
       page: 1,
       limit: 20,
@@ -144,7 +146,15 @@ describe("getAllMovies", () => {
     await createTestMovie();
     await createTestMovie({ name: "Sicario", year: 2015 });
 
-    const movies = await getAllMovies(1, 20);
+    const movies = await getAllMovies(
+      1,
+      20,
+      {},
+      {
+        sortBy: "year",
+        sortDir: "asc",
+      },
+    );
     expect(movies.movies.map((m) => m.name).sort()).toEqual([
       "Inception",
       "Sicario",
@@ -152,12 +162,20 @@ describe("getAllMovies", () => {
   });
 
   it("pages through movies ordered by name", async () => {
-    await createTestMovie({ name: "Sicario" });
-    await createTestMovie({ name: "Arrival" });
-    await createTestMovie(); // Inception
+    await createTestMovie({ name: "Sicario", year: 2000 });
+    await createTestMovie({ name: "Arrival", year: 2000 });
+    await createTestMovie({ name: "Inception", year: 2000 });
 
     // Ascending by name: Arrival, Inception, Sicario.
-    const firstPage = await getAllMovies(1, 2);
+    const firstPage = await getAllMovies(
+      1,
+      2,
+      {},
+      {
+        sortBy: "name",
+        sortDir: "asc",
+      },
+    );
     expect(firstPage.movies.map((m) => m.name)).toEqual([
       "Arrival",
       "Inception",
@@ -165,7 +183,15 @@ describe("getAllMovies", () => {
     expect(firstPage.total).toBe(3);
     expect(firstPage.totalPages).toBe(2);
 
-    const secondPage = await getAllMovies(2, 2);
+    const secondPage = await getAllMovies(
+      2,
+      2,
+      {},
+      {
+        sortBy: "name",
+        sortDir: "asc",
+      },
+    );
     expect(secondPage.movies.map((m) => m.name)).toEqual(["Sicario"]);
     expect(secondPage.totalPages).toBe(2);
 
@@ -366,18 +392,36 @@ describe("getAllMovies", () => {
 
     it("applies filter with pagination", async () => {
       for (let i = 1; i <= 5; i++) {
-        await createTestMovie({ name: `Sci-Fi ${i}`, genre: "sci-fi" });
+        await createTestMovie({
+          name: `Sci-Fi ${i}`,
+          genre: "sci-fi",
+          year: 2000,
+        });
       }
       for (let i = 1; i <= 3; i++) {
-        await createTestMovie({ name: `Drama ${i}`, genre: "drama" });
+        await createTestMovie({
+          name: `Drama ${i}`,
+          genre: "drama",
+          year: 2000,
+        });
       }
 
-      const page1 = await getAllMovies(1, 2, { genre: "sci-fi" });
+      const page1 = await getAllMovies(
+        1,
+        2,
+        { genre: "sci-fi" },
+        { sortBy: "name", sortDir: "asc" },
+      );
       expect(page1.movies.map((m) => m.name)).toEqual(["Sci-Fi 1", "Sci-Fi 2"]);
       expect(page1.total).toBe(5);
       expect(page1.totalPages).toBe(3);
 
-      const page2 = await getAllMovies(2, 2, { genre: "sci-fi" });
+      const page2 = await getAllMovies(
+        2,
+        2,
+        { genre: "sci-fi" },
+        { sortBy: "name", sortDir: "asc" },
+      );
       expect(page2.movies.map((m) => m.name)).toEqual(["Sci-Fi 3", "Sci-Fi 4"]);
     });
 

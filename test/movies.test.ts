@@ -89,14 +89,19 @@ describe("moviesGetAll", () => {
     totalPages: 1,
   };
 
-  it("responds with the paginated envelope, defaulting to page 1 of 20", async () => {
+  it("responds with the paginated envelope, defaulting to page 1 of 20 with default sort", async () => {
     vi.mocked(getAllMovies).mockResolvedValue(page);
 
     const res = makeResponse();
     await moviesGetAll(makeRequest(), res);
 
     expect(getAllMovies).toHaveBeenCalledOnce();
-    expect(getAllMovies).toHaveBeenCalledWith(1, 20, {});
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      {},
+      { sortBy: "year", sortDir: "asc" },
+    );
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(page);
   });
@@ -108,7 +113,12 @@ describe("moviesGetAll", () => {
     const res = makeResponse();
     await moviesGetAll(makeRequest({ query: { page: "2", limit: "5" } }), res);
 
-    expect(getAllMovies).toHaveBeenCalledWith(2, 5, {});
+    expect(getAllMovies).toHaveBeenCalledWith(
+      2,
+      5,
+      {},
+      { sortBy: "year", sortDir: "asc" },
+    );
     expect(res.json).toHaveBeenCalledWith(secondPage);
   });
 
@@ -129,6 +139,97 @@ describe("moviesGetAll", () => {
     await expect(moviesGetAll(makeRequest(), res)).rejects.toThrow("db down");
 
     expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("parses and passes search query parameter", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(makeRequest({ query: { search: "Matrix" } }), res);
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { search: "Matrix" },
+      { sortBy: "year", sortDir: "asc" },
+    );
+    expect(res.json).toHaveBeenCalledWith(page);
+  });
+
+  it("handles empty search query", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(makeRequest({ query: { search: "" } }), res);
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { search: "" },
+      { sortBy: "year", sortDir: "asc" },
+    );
+  });
+
+  it("parses and passes sortBy and sortDir parameters", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(
+      makeRequest({ query: { sortBy: "name", sortDir: "desc" } }),
+      res,
+    );
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      {},
+      { sortBy: "name", sortDir: "desc" },
+    );
+  });
+
+  it("rejects invalid sortBy parameter without calling getAllMovies", async () => {
+    const res = makeResponse();
+    await expect(
+      moviesGetAll(makeRequest({ query: { sortBy: "invalid" } }), res),
+    ).rejects.toThrow(ZodError);
+
+    expect(getAllMovies).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid sortDir parameter without calling getAllMovies", async () => {
+    const res = makeResponse();
+    await expect(
+      moviesGetAll(makeRequest({ query: { sortDir: "invalid" } }), res),
+    ).rejects.toThrow(ZodError);
+
+    expect(getAllMovies).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("combines filter, search, and sort parameters", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(
+      makeRequest({
+        query: {
+          year: "1999",
+          genre: "sci-fi",
+          search: "Matrix",
+          sortBy: "imdb",
+          sortDir: "desc",
+        },
+      }),
+      res,
+    );
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { year: 1999, genre: "sci-fi", search: "Matrix" },
+      { sortBy: "imdb", sortDir: "desc" },
+    );
   });
 });
 

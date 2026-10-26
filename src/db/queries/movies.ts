@@ -15,8 +15,10 @@ import { movies } from "../schema/movies.sql.js";
 import { assertUUID, firstOrUndefined, isUUID } from "./utils.js";
 import {
   Movie,
+  MovieFilter,
   MovieInput,
   MoviesMeta,
+  MovieSort,
   MoviesPaginated,
   MovieWithRatings,
 } from "../../models/movies.js";
@@ -61,16 +63,9 @@ function toMovieWithRatings(
   };
 }
 
-interface Filter {
-  year?: number | null | undefined;
-  genre?: string | null | undefined;
-  averageRating?: number | null | undefined;
-  imdbRating?: number | null | undefined;
-}
-
 function buildFilterConditions(
   averages: ReturnType<typeof ratingAverages>,
-  filter?: Filter,
+  filter?: MovieFilter,
 ) {
   const whereConditions = [];
 
@@ -107,9 +102,23 @@ function buildFilterConditions(
 export async function getAllMovies(
   page: number,
   limit: number,
-  filter?: Filter,
+  filter?: MovieFilter,
+  sort?: MovieSort,
 ): Promise<MoviesPaginated> {
+  if (!sort) {
+    sort = { sortBy: "year", sortDir: "asc" };
+  }
   const averages = ratingAverages();
+
+  const sortColumnMap = {
+    name: movies.name,
+    year: movies.year,
+    runtime: movies.runtime,
+    imdb: movies.imdbRating,
+    genre: movies.genre,
+    avg_rating: averages.average,
+  };
+
   const whereConditions = buildFilterConditions(averages, filter);
 
   const countSelection = db
@@ -124,7 +133,10 @@ export async function getAllMovies(
 
   const [total] = await countSelectionWithFilters;
 
-  const dataSelection = db
+  const column = sortColumnMap[sort.sortBy as keyof typeof sortColumnMap];
+
+  // Build entire query in one chain - no intermediate variables
+  const rows = await db
     .select({
       ...getTableColumns(movies),
       averageRating: averages.average,
@@ -132,16 +144,16 @@ export async function getAllMovies(
     })
     .from(movies)
     .leftJoin(averages, eq(averages.movieId, movies.id))
-    .orderBy(asc(movies.name))
+    .where(and(...whereConditions))
+    .orderBy(
+      column
+        ? sort.sortDir === "asc"
+          ? asc(column)
+          : desc(column)
+        : asc(movies.name),
+    )
     .limit(limit)
     .offset((page - 1) * limit);
-
-  const dataSelectionWithFilters =
-    whereConditions.length > 0
-      ? dataSelection.where(and(...whereConditions))
-      : dataSelection;
-
-  const rows = await dataSelectionWithFilters;
 
   return {
     movies: rows.map(toMovieWithRatings),

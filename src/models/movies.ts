@@ -68,6 +68,18 @@ export const movieFilterSchema = z.object({
     (val) => (val === "null" ? null : val),
     z.coerce.number().min(0).max(10).optional().nullable(),
   ),
+  search: z.string().optional(),
 });
+
+export const movieSortSchema = z.object({
+  sortBy: z
+    .enum(["name", "year", "runtime", "imdb", "genre", "avg_rating"])
+    .default("year"),
+  sortDir: z.enum(["asc", "desc"]).default("asc"),
+});
+
+export type MovieFilter = z.infer<typeof movieFilterSchema>;
+
+export type MovieSort = z.infer<typeof movieSortSchema>;
 
 export type MovieInput = z.infer<typeof movieInputSchema>;
