@@ -658,7 +658,7 @@ describe("updateMovie", () => {
     if (!result.success) {
       const errors = result.error.format();
       expect(errors.year?._errors).toContain(
-        "Too big: expected number to be <=2027",
+        "Year cannot be more than one year in the future",
       );
     }
   });
