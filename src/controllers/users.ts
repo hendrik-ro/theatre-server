@@ -119,6 +119,7 @@ export const usersMe: AsyncRequestHandler = async (req, res) => {
 // The presented token must verify, match the user's single active database
 // row (hash), and then gets replaced by a new pair (rotation).
 export const usersRefresh: AsyncRequestHandler = async (req, res) => {
+  if (!req.headers.cookie) throw new HttpError(401, "Refresh token required");
   const token = getCookie(REFRESH_COOKIE_NAME, req.headers.cookie);
   if (!token) {
     throw new HttpError(401, "Refresh token required");

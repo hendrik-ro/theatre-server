@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../auth/jwt.js";
 import { COOKIE_NAME, getCookie } from "../auth/cookies.js";
 import { isUUID } from "../db/queries/utils.js";
@@ -11,11 +11,11 @@ const BEARER_PREFIX = "Bearer ";
 // otherwise passes through silently. Enforcing authentication — and
 // rejecting the request — is requireAuth's job per route; an invalid or
 // expired token here simply falls through to a 401 from requireAuth.
-export function authenticateJWT(
+export const authenticateJWT = async (
   req: Request,
   res: Response,
-  next: NextFunction,
-): void {
+  next?: NextFunction,
+): Promise<void> => {
   let token: string | undefined;
 
   const authHeader = req.headers.authorization;
@@ -28,7 +28,7 @@ export function authenticateJWT(
   }
 
   if (!token) {
-    next();
+    next?.();
     return;
   }
 
@@ -36,19 +36,16 @@ export function authenticateJWT(
     const payload = verifyAccessToken(token, res.locals.requestId);
 
     if (!payload || !isUUID(payload.userId)) {
-      next();
+      next?.();
       return;
     }
 
-    getUserById(payload.userId)
-      .then((user) => {
-        if (user) {
-          req.user = user;
-        }
-        next();
-      })
-      .catch(next);
+    const user = await getUserById(payload.userId);
+    if (user) {
+      req.user = user;
+    }
+    next?.();
   } catch {
-    next();
+    next?.();
   }
-}
+};

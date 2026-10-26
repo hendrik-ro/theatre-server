@@ -10,7 +10,10 @@ import { requireUser } from "./helpers.js";
 export const watchlistsAddMovie: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
   const movie = await getMovieById(req.params.movieId);
-  if (!movie) return res.sendStatus(400);
+  if (!movie) {
+    res.status(404).json({ message: "Movie not found" });
+    return;
+  }
   await addMovie(user.id, movie.id);
   res.status(201).json({ message: "Movie added to watchlist" });
 };

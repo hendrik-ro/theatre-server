@@ -1,9 +1,8 @@
 ## [2.0.3](https://github.com/hendrik-ro/theatre-server/compare/v2.0.2...v2.0.3) (2026-10-25)
 
-
 ### Bug Fixes
 
-* **movies:** filtering ratings gte ([a404a63](https://github.com/hendrik-ro/theatre-server/commit/a404a632ecbf852b00f829e67ddd847e7ecb4623))
+- **movies:** filtering ratings gte ([a404a63](https://github.com/hendrik-ro/theatre-server/commit/a404a632ecbf852b00f829e67ddd847e7ecb4623))
 
 ## [2.0.2](https://github.com/hendrik-ro/theatre-server/compare/v2.0.1...v2.0.2) (2026-10-25)
 

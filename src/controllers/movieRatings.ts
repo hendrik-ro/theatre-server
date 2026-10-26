@@ -14,7 +14,10 @@ export const movieRatingsRate: AsyncRequestHandler = async (req, res) => {
   const user = requireUser(req);
   assertUUID(req.params.movieId);
   const movie = await getMovieById(req.params.movieId);
-  if (!movie) return res.sendStatus(404);
+  if (!movie) {
+    res.sendStatus(404);
+    return;
+  }
   const { rating } = movieRatingSchema.parse(req.body);
   const ratedMovie = await rateMovie(user.id, movie.id, rating);
   res.status(201).json(ratedMovie);
@@ -33,7 +36,10 @@ export const movieRatingsGetRating: AsyncRequestHandler = async (req, res) => {
   const movieId = req.params.movieId;
   assertUUID(movieId);
   const rating = await getMovieRating(user.id, movieId);
-  if (!rating) return res.sendStatus(404);
+  if (!rating) {
+    res.sendStatus(404);
+    return;
+  }
   res.status(200).json(rating);
 };
 
