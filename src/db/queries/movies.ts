@@ -96,7 +96,7 @@ function buildFilterConditions(
     );
   }
   if (filter?.search) {
-    whereConditions.push(like(movies.name, `%${filter.search}%`));
+    whereConditions.push(sql`${movies.name} ILIKE ${`%${filter.search}%`}`);
   }
 
   return whereConditions;

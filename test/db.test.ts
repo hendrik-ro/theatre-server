@@ -565,6 +565,70 @@ describe("getAllMovies", () => {
       expect(result.movies.length).toBe(1);
       expect(result.movies[0].name).toBe("All Edge");
     });
+
+    it("filters movies by search (name) with partial matching", async () => {
+      await createTestMovie({ name: "The Matrix", year: 1999 });
+      await createTestMovie({ name: "Inception", year: 2010 });
+      await createTestMovie({ name: "Matrix Reloaded", year: 2003 });
+      await createTestMovie({ name: "Interstellar", year: 2014 });
+
+      const result = await getAllMovies(1, 20, { search: "Matrix" });
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Matrix Reloaded",
+        "The Matrix",
+      ]);
+      expect(result.total).toBe(2);
+    });
+
+    it("returns empty array when search matches no movies", async () => {
+      await createTestMovie({ name: "Inception" });
+
+      const result = await getAllMovies(1, 20, { search: "NonExistent" });
+      expect(result.movies).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it("handles empty search string", async () => {
+      await createTestMovie({ name: "Inception" });
+      await createTestMovie({ name: "The Matrix" });
+
+      const result = await getAllMovies(1, 20, { search: "" });
+      expect(result.movies.map((m) => m.name).sort()).toEqual([
+        "Inception",
+        "The Matrix",
+      ]);
+      expect(result.total).toBe(2);
+    });
+
+    it("combines search with other filters", async () => {
+      await createTestMovie({
+        name: "The Matrix",
+        year: 1999,
+        genre: "sci-fi",
+      });
+      await createTestMovie({
+        name: "Matrix Code",
+        year: 2000,
+        genre: "drama",
+      });
+      await createTestMovie({ name: "Inception", year: 2010, genre: "sci-fi" });
+
+      const result = await getAllMovies(1, 20, {
+        search: "Matrix",
+        genre: "sci-fi",
+      });
+      expect(result.movies.map((m) => m.name)).toEqual(["The Matrix"]);
+      expect(result.total).toBe(1);
+    });
+
+    it("search is case-insensitive", async () => {
+      await createTestMovie({ name: "The Matrix" });
+      await createTestMovie({ name: "inception" });
+
+      const result = await getAllMovies(1, 20, { search: "MATRIX" });
+      expect(result.movies.map((m) => m.name)).toEqual(["The Matrix"]);
+      expect(result.total).toBe(1);
+    });
   });
 });
 
