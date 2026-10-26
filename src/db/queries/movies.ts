@@ -95,6 +95,9 @@ function buildFilterConditions(
         : gte(movies.imdbRating, filter.imdbRating),
     );
   }
+  if (filter?.search) {
+    whereConditions.push(like(movies.name, `%${filter.search}%`));
+  }
 
   return whereConditions;
 }
