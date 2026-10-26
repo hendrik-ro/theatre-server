@@ -46,10 +46,22 @@ export const moviePaginationQuery = z.object({
 });
 
 export const movieFilterSchema = z.object({
-  year: z.coerce.number().int().min(1750).optional().nullable(),
-  genre: z.string().optional().nullable(),
-  averageRating: z.coerce.number().min(0).max(10).optional().nullable(),
-  imdbRating: z.coerce.number().min(0).max(10).optional().nullable(),
+  year: z.preprocess(
+    (val) => (val === "null" ? null : val),
+    z.coerce.number().int().min(1750).optional().nullable(),
+  ),
+  genre: z.preprocess(
+    (val) => (val === "null" ? null : val),
+    z.string().optional().nullable(),
+  ),
+  averageRating: z.preprocess(
+    (val) => (val === "null" ? null : val),
+    z.coerce.number().min(0).max(10).optional().nullable(),
+  ),
+  imdbRating: z.preprocess(
+    (val) => (val === "null" ? null : val),
+    z.coerce.number().min(0).max(10).optional().nullable(),
+  ),
 });
 
 export type MovieInput = z.infer<typeof movieInputSchema>;
