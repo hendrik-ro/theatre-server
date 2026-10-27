@@ -9,5 +9,5 @@ export interface UserMovieRating {
 }
 
 export const movieRatingSchema = z.object({
-  rating: z.int().min(0).max(10),
+  rating: z.int().min(1).max(10),
 });

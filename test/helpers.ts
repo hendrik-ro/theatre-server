@@ -58,7 +58,6 @@ const defaultMovieInput: MovieInput = {
   name: "Inception",
   year: 2010,
   runtime: 148,
-  imdbRating: 8.8,
   genre: "sci-fi",
 };
 

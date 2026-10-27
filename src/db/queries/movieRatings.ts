@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { UserMovieRating } from "../../models/ratings.js";
 import { db } from "../index.js";
-import { movieRatings } from "../schema/movieRatings.js";
+import { movieRatings } from "../schema/movieRatings.sql.js";
 import { assertUUID, firstOrUndefined } from "./utils.js";
 import { HttpError } from "../../utils/errors.js";
 

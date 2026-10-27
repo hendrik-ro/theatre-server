@@ -40,7 +40,6 @@ const movie: Movie = {
   name: "The Matrix",
   year: 1999,
   runtime: 136,
-  imdbRating: 8.7,
   genre: "sci-fi",
 };
 
@@ -74,13 +73,14 @@ beforeEach(() => {
 describe("moviesGetAll", () => {
   const page: MoviesPaginated = {
     movies: [
-      { ...movie, averageRating: null, ratingCount: 0 },
+      { ...movie, averageRating: null, ratingCount: 0, userRating: null },
       {
         ...movie,
         id: "b",
         name: "Inception",
         averageRating: null,
         ratingCount: 0,
+        userRating: null,
       },
     ],
     page: 1,
@@ -101,6 +101,7 @@ describe("moviesGetAll", () => {
       20,
       {},
       { sortBy: "year", sortDir: "asc" },
+      undefined,
     );
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(page);
@@ -118,6 +119,7 @@ describe("moviesGetAll", () => {
       5,
       {},
       { sortBy: "year", sortDir: "asc" },
+      undefined,
     );
     expect(res.json).toHaveBeenCalledWith(secondPage);
   });
@@ -152,6 +154,7 @@ describe("moviesGetAll", () => {
       20,
       { search: "Matrix" },
       { sortBy: "year", sortDir: "asc" },
+      undefined,
     );
     expect(res.json).toHaveBeenCalledWith(page);
   });
@@ -167,6 +170,7 @@ describe("moviesGetAll", () => {
       20,
       { search: "" },
       { sortBy: "year", sortDir: "asc" },
+      undefined,
     );
   });
 
@@ -184,6 +188,7 @@ describe("moviesGetAll", () => {
       20,
       {},
       { sortBy: "name", sortDir: "desc" },
+      undefined,
     );
   });
 
@@ -217,7 +222,7 @@ describe("moviesGetAll", () => {
           year: "1999",
           genre: "sci-fi",
           search: "Matrix",
-          sortBy: "imdb",
+          sortBy: "year",
           sortDir: "desc",
         },
       }),
@@ -228,7 +233,8 @@ describe("moviesGetAll", () => {
       1,
       20,
       { year: 1999, genre: "sci-fi", search: "Matrix" },
-      { sortBy: "imdb", sortDir: "desc" },
+      { sortBy: "year", sortDir: "desc" },
+      undefined,
     );
   });
 });
@@ -239,6 +245,7 @@ describe("moviesGetById", () => {
       ...movie,
       averageRating: null,
       ratingCount: 0,
+      userRating: null,
     });
 
     const res = makeResponse();
@@ -250,6 +257,7 @@ describe("moviesGetById", () => {
       ...movie,
       averageRating: null,
       ratingCount: 0,
+      userRating: null,
     });
   });
 
@@ -290,7 +298,6 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imdbRating: 8.7,
       genre: "sci-fi",
     };
     await moviesCreate(makeRequest({ body }), res);
@@ -299,7 +306,6 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imdbRating: 8.7,
       genre: "sci-fi",
     });
     expect(res.status).toHaveBeenCalledWith(201);
@@ -351,7 +357,6 @@ describe("moviesUpdateById", () => {
       name: "The Matrix Reloaded",
       year: 2003,
       runtime: 138,
-      imdbRating: 7.4,
       genre: "sci-fi",
     };
     await moviesUpdateById(
@@ -363,7 +368,6 @@ describe("moviesUpdateById", () => {
       name: "The Matrix Reloaded",
       year: 2003,
       runtime: 138,
-      imdbRating: 7.4,
       genre: "sci-fi",
     });
     expect(res.status).toHaveBeenCalledWith(200);

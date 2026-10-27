@@ -4,7 +4,6 @@ export interface Movie {
   name: string;
   year: number | null;
   runtime: number | null;
-  imdbRating: number | null;
   genre: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -14,6 +13,7 @@ export interface Movie {
 export interface MovieWithRatings extends Movie {
   averageRating: number | null;
   ratingCount: number;
+  userRating: number | null;
 }
 
 export interface MoviesPaginated {
@@ -42,7 +42,6 @@ export const movieInputSchema = z.object({
       message: "Year cannot be more than one year in the future",
     }),
   runtime: z.number().int().min(1).max(9999).optional().nullable(),
-  imdbRating: z.number().min(0).max(10).optional().nullable(),
   genre: z.string().trim().min(1).max(100).optional().nullable(),
 });
 
@@ -52,28 +51,15 @@ export const moviePaginationQuery = z.object({
 });
 
 export const movieFilterSchema = z.object({
-  year: z.preprocess(
-    (val) => (val === "null" ? null : val),
-    z.coerce.number().int().min(1750).optional().nullable(),
-  ),
-  genre: z.preprocess(
-    (val) => (val === "null" ? null : val),
-    z.string().optional().nullable(),
-  ),
-  averageRating: z.preprocess(
-    (val) => (val === "null" ? null : val),
-    z.coerce.number().min(0).max(10).optional().nullable(),
-  ),
-  imdbRating: z.preprocess(
-    (val) => (val === "null" ? null : val),
-    z.coerce.number().min(0).max(10).optional().nullable(),
-  ),
+  year: z.coerce.number().int().optional().nullable(),
+  genre: z.string().optional().nullable(),
+  averageRating: z.coerce.number().min(1).optional().nullable(),
   search: z.string().optional(),
 });
 
 export const movieSortSchema = z.object({
   sortBy: z
-    .enum(["name", "year", "runtime", "imdb", "genre", "avg_rating"])
+    .enum(["name", "year", "runtime", "genre", "avg_rating"])
     .default("year"),
   sortDir: z.enum(["asc", "desc"]).default("asc"),
 });

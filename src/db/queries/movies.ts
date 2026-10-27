@@ -22,7 +22,8 @@ import {
   MoviesPaginated,
   MovieWithRatings,
 } from "../../models/movies.js";
-import { movieRatings } from "../schema/movieRatings.js";
+import { movieRatings } from "../schema/movieRatings.sql.js";
+import { User } from "../../models/users.js";
 
 export async function createMovie(input: MovieInput): Promise<Movie> {
   const [result] = await db.insert(movies).values(input).returning();
@@ -45,6 +46,7 @@ function toMovieWithRatings(
   row: Movie & {
     averageRating: string | number | null;
     ratingCount: number | null;
+    rating?: number | null;
   },
 ): MovieWithRatings {
   // Handle averageRating: null -> null, NaN -> 0
@@ -60,12 +62,13 @@ function toMovieWithRatings(
     ...row,
     averageRating,
     ratingCount: row.ratingCount ?? 0,
+    userRating: row.rating ?? null,
   };
 }
 
 function buildFilterConditions(
   averages: ReturnType<typeof ratingAverages>,
-  filter?: MovieFilter,
+  filter: MovieFilter,
 ) {
   const whereConditions = [];
 
@@ -88,13 +91,6 @@ function buildFilterConditions(
         : gte(averages.average, filter.averageRating),
     );
   }
-  if (filter?.imdbRating !== undefined) {
-    whereConditions.push(
-      filter.imdbRating === null
-        ? isNull(movies.imdbRating)
-        : gte(movies.imdbRating, filter.imdbRating),
-    );
-  }
   if (filter?.search) {
     whereConditions.push(sql`${movies.name} ILIKE ${`%${filter.search}%`}`);
   }
@@ -105,19 +101,16 @@ function buildFilterConditions(
 export async function getAllMovies(
   page: number,
   limit: number,
-  filter?: MovieFilter,
-  sort?: MovieSort,
+  filter: MovieFilter,
+  sort: MovieSort,
+  user: User | undefined,
 ): Promise<MoviesPaginated> {
-  if (!sort) {
-    sort = { sortBy: "year", sortDir: "asc" };
-  }
   const averages = ratingAverages();
 
   const sortColumnMap = {
     name: movies.name,
     year: movies.year,
     runtime: movies.runtime,
-    imdb: movies.imdbRating,
     genre: movies.genre,
     avg_rating: averages.average,
   };
@@ -139,7 +132,7 @@ export async function getAllMovies(
   const column = sortColumnMap[sort.sortBy as keyof typeof sortColumnMap];
 
   // Build entire query in one chain - no intermediate variables
-  const rows = await db
+  const query = db
     .select({
       ...getTableColumns(movies),
       averageRating: averages.average,
@@ -158,6 +151,18 @@ export async function getAllMovies(
     .limit(limit)
     .offset((page - 1) * limit);
 
+  if (user) {
+    query.leftJoin(
+      movieRatings,
+      and(
+        eq(movieRatings.movieId, movies.id),
+        eq(movieRatings.userId, user.id),
+      ),
+    );
+  }
+
+  const rows = await query;
+
   return {
     movies: rows.map(toMovieWithRatings),
     page,
@@ -167,10 +172,13 @@ export async function getAllMovies(
   };
 }
 
-export async function getMovieById(id: string) {
+export async function getMovieById(id: string, userId?: string | null) {
   if (!isUUID(id)) return undefined;
+  if (userId) {
+    if (!isUUID(userId)) userId = null;
+  }
   const averages = ratingAverages();
-  const rows = await db
+  const query = db
     .select({
       ...getTableColumns(movies),
       averageRating: averages.average,
@@ -179,6 +187,14 @@ export async function getMovieById(id: string) {
     .from(movies)
     .leftJoin(averages, eq(averages.movieId, movies.id))
     .where(eq(movies.id, id));
+
+  if (userId) {
+    query.leftJoin(
+      movieRatings,
+      and(eq(movieRatings.movieId, movies.id), eq(movieRatings.userId, userId)),
+    );
+  }
+  const rows = await query;
   return firstOrUndefined(rows.map(toMovieWithRatings));
 }
 
