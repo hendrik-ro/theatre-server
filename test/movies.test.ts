@@ -40,7 +40,6 @@ const movie: Movie = {
   name: "The Matrix",
   year: 1999,
   runtime: 136,
-  imdbRating: 8.7,
   genre: "sci-fi",
 };
 
@@ -74,13 +73,14 @@ beforeEach(() => {
 describe("moviesGetAll", () => {
   const page: MoviesPaginated = {
     movies: [
-      { ...movie, averageRating: null, ratingCount: 0 },
+      { ...movie, averageRating: null, ratingCount: 0, userRating: null },
       {
         ...movie,
         id: "b",
         name: "Inception",
         averageRating: null,
         ratingCount: 0,
+        userRating: null,
       },
     ],
     page: 1,
@@ -89,14 +89,20 @@ describe("moviesGetAll", () => {
     totalPages: 1,
   };
 
-  it("responds with the paginated envelope, defaulting to page 1 of 20", async () => {
+  it("responds with the paginated envelope, defaulting to page 1 of 20 with default sort", async () => {
     vi.mocked(getAllMovies).mockResolvedValue(page);
 
     const res = makeResponse();
     await moviesGetAll(makeRequest(), res);
 
     expect(getAllMovies).toHaveBeenCalledOnce();
-    expect(getAllMovies).toHaveBeenCalledWith(1, 20, {});
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      {},
+      { sortBy: "year", sortDir: "asc" },
+      undefined,
+    );
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(page);
   });
@@ -108,7 +114,13 @@ describe("moviesGetAll", () => {
     const res = makeResponse();
     await moviesGetAll(makeRequest({ query: { page: "2", limit: "5" } }), res);
 
-    expect(getAllMovies).toHaveBeenCalledWith(2, 5, {});
+    expect(getAllMovies).toHaveBeenCalledWith(
+      2,
+      5,
+      {},
+      { sortBy: "year", sortDir: "asc" },
+      undefined,
+    );
     expect(res.json).toHaveBeenCalledWith(secondPage);
   });
 
@@ -130,6 +142,101 @@ describe("moviesGetAll", () => {
 
     expect(res.json).not.toHaveBeenCalled();
   });
+
+  it("parses and passes search query parameter", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(makeRequest({ query: { search: "Matrix" } }), res);
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { search: "Matrix" },
+      { sortBy: "year", sortDir: "asc" },
+      undefined,
+    );
+    expect(res.json).toHaveBeenCalledWith(page);
+  });
+
+  it("handles empty search query", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(makeRequest({ query: { search: "" } }), res);
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { search: "" },
+      { sortBy: "year", sortDir: "asc" },
+      undefined,
+    );
+  });
+
+  it("parses and passes sortBy and sortDir parameters", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(
+      makeRequest({ query: { sortBy: "name", sortDir: "desc" } }),
+      res,
+    );
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      {},
+      { sortBy: "name", sortDir: "desc" },
+      undefined,
+    );
+  });
+
+  it("rejects invalid sortBy parameter without calling getAllMovies", async () => {
+    const res = makeResponse();
+    await expect(
+      moviesGetAll(makeRequest({ query: { sortBy: "invalid" } }), res),
+    ).rejects.toThrow(ZodError);
+
+    expect(getAllMovies).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid sortDir parameter without calling getAllMovies", async () => {
+    const res = makeResponse();
+    await expect(
+      moviesGetAll(makeRequest({ query: { sortDir: "invalid" } }), res),
+    ).rejects.toThrow(ZodError);
+
+    expect(getAllMovies).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("combines filter, search, and sort parameters", async () => {
+    vi.mocked(getAllMovies).mockResolvedValue(page);
+
+    const res = makeResponse();
+    await moviesGetAll(
+      makeRequest({
+        query: {
+          year: "1999",
+          genre: "sci-fi",
+          search: "Matrix",
+          sortBy: "year",
+          sortDir: "desc",
+        },
+      }),
+      res,
+    );
+
+    expect(getAllMovies).toHaveBeenCalledWith(
+      1,
+      20,
+      { year: 1999, genre: "sci-fi", search: "Matrix" },
+      { sortBy: "year", sortDir: "desc" },
+      undefined,
+    );
+  });
 });
 
 describe("moviesGetById", () => {
@@ -138,6 +245,7 @@ describe("moviesGetById", () => {
       ...movie,
       averageRating: null,
       ratingCount: 0,
+      userRating: null,
     });
 
     const res = makeResponse();
@@ -149,6 +257,7 @@ describe("moviesGetById", () => {
       ...movie,
       averageRating: null,
       ratingCount: 0,
+      userRating: null,
     });
   });
 
@@ -189,7 +298,6 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imdbRating: 8.7,
       genre: "sci-fi",
     };
     await moviesCreate(makeRequest({ body }), res);
@@ -198,7 +306,6 @@ describe("moviesCreate", () => {
       name: "The Matrix",
       year: 1999,
       runtime: 136,
-      imdbRating: 8.7,
       genre: "sci-fi",
     });
     expect(res.status).toHaveBeenCalledWith(201);
@@ -250,7 +357,6 @@ describe("moviesUpdateById", () => {
       name: "The Matrix Reloaded",
       year: 2003,
       runtime: 138,
-      imdbRating: 7.4,
       genre: "sci-fi",
     };
     await moviesUpdateById(
@@ -262,7 +368,6 @@ describe("moviesUpdateById", () => {
       name: "The Matrix Reloaded",
       year: 2003,
       runtime: 138,
-      imdbRating: 7.4,
       genre: "sci-fi",
     });
     expect(res.status).toHaveBeenCalledWith(200);

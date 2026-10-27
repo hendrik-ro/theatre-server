@@ -24,7 +24,7 @@ export const movieRatings = pgTable(
     primaryKey({ columns: [table.userId, table.movieId] }),
     check(
       "user_movie_ratings_range",
-      sql`${table.rating} >= 0 AND ${table.rating} <= 10`,
+      sql`${table.rating} >= 1 AND ${table.rating} <= 10`,
     ),
   ],
 );

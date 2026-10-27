@@ -11,14 +11,19 @@ import {
   movieFilterSchema,
   movieInputSchema,
   moviePaginationQuery,
+  movieSortSchema,
 } from "../models/movies.js";
 import type { AsyncRequestHandler } from "../utils/asyncHandler.js";
 
 export const moviesGetAll: AsyncRequestHandler = async (req, res) => {
   const { page, limit } = moviePaginationQuery.parse(req.query);
   const filter = movieFilterSchema.parse(req.query);
+  let sort = movieSortSchema.parse(req.query) ?? {
+    sortBy: "name",
+    sortDir: "asc",
+  };
 
-  const result = await getAllMovies(page, limit, filter);
+  const result = await getAllMovies(page, limit, filter, sort, req.user);
   res.json(result);
 };
 

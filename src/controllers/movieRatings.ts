@@ -4,7 +4,7 @@ import {
   getMovieRating,
   rateMovie,
   unrateMovie,
-} from "../db/queries/movieRatings.sql.js";
+} from "../db/queries/movieRatings.js";
 import { movieRatingSchema } from "../models/ratings.js";
 import { AsyncRequestHandler } from "../utils/asyncHandler.js";
 import { requireUser } from "./helpers.js";
