@@ -19,41 +19,36 @@ repository; the backend is the focus of this project.
 REST endpoints, versioned through semantic-release and JSON errors
 throughout: `{ "message": string }`.
 
-| Method | Route                      | Auth           | Description                                                                |
-| ------ | -------------------------- | -------------- | -------------------------------------------------------------------------- |
-| POST   | `/api/users/register`      | —              | Create an account and log in                                               |
-| POST   | `/api/users/login`         | —              | Log in                                                                     |
-| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies                                    |
-| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                                      |
-| GET    | `/api/users/me`            | session        | Current user profile                                                       |
-| DELETE | `/api/users/:id`           | self/admin     | Delete an account                                                          |
-| GET    | `/api/movies`              | —              | List movies, paginated (`?page`, `?limit`), with community rating averages |
-| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                                            |
-| GET    | `/api/movies/:id`          | —              | Fetch one movie with community rating averages                             |
-| POST   | `/api/movies`              | session        | Create a movie                                                             |
-| PUT    | `/api/movies/:id`          | session        | Update a movie                                                             |
-| GET    | `/api/watchlists`          | session        | List the current user's watchlist                                          |
-| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist                                               |
-| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist                                          |
-| GET    | `/api/ratings`             | session        | List all ratings for the current user (sorted by movieId)                  |
-| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie                                          |
-| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 0-10)                                     |
-| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                                                   |
-| GET    | `/api/admin/users`         | admin          | List all users                                                             |
-| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                                                              |
-| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                                                             |
-| GET    | `/api/health`              | —              | Liveness check                                                             |
+| Method | Route                      | Auth           | Description                                                                                                                                                                           |
+| ------ | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/users/register`      | —              | Create an account and log in                                                                                                                                                          |
+| POST   | `/api/users/login`         | —              | Log in                                                                                                                                                                                |
+| POST   | `/api/users/logout`        | session        | Revoke the refresh token, clear cookies                                                                                                                                               |
+| POST   | `/api/users/refresh`       | refresh cookie | Rotate the token pair                                                                                                                                                                 |
+| GET    | `/api/users/me`            | session        | Current user profile                                                                                                                                                                  |
+| DELETE | `/api/users/:id`           | self/admin     | Delete an account                                                                                                                                                                     |
+| GET    | `/api/movies`              | —              | List movies, paginated (`?page`, `?limit`), filtered (`?year`, `?genre`, `?search`, `?averageRating`), sorted (`?sortBy`, `?sortDir`), with community rating averages and user rating |
+| GET    | `/api/movies/meta`         | —              | Movie counts per year and genre                                                                                                                                                       |
+| GET    | `/api/movies/:id`          | —              | Fetch one movie with community rating averages                                                                                                                                        |
+| POST   | `/api/movies`              | session        | Create a movie                                                                                                                                                                        |
+| PUT    | `/api/movies/:id`          | session        | Update a movie                                                                                                                                                                        |
+| GET    | `/api/watchlists`          | session        | List the current user's watchlist                                                                                                                                                     |
+| POST   | `/api/watchlists/:movieId` | session        | Add a movie to the watchlist                                                                                                                                                          |
+| DELETE | `/api/watchlists/:movieId` | session        | Remove a movie from the watchlist                                                                                                                                                     |
+| GET    | `/api/ratings`             | session        | List all ratings for the current user (sorted by movieId)                                                                                                                             |
+| GET    | `/api/ratings/:movieId`    | session        | Get the user's rating for a movie                                                                                                                                                     |
+| POST   | `/api/ratings/:movieId`    | session        | Rate or re-rate a movie (integer 1-10)                                                                                                                                                |
+| DELETE | `/api/ratings/:movieId`    | session        | Remove the user's rating                                                                                                                                                              |
+| GET    | `/api/admin/users`         | admin          | List all users                                                                                                                                                                        |
+| DELETE | `/api/admin/users/:id`     | admin          | Delete a user                                                                                                                                                                         |
+| DELETE | `/api/admin/movies/:id`    | admin          | Delete a movie                                                                                                                                                                        |
+| GET    | `/api/health`              | —              | Liveness check                                                                                                                                                                        |
 
 Here "session" in the Auth column means a valid JWT access-token cookie
 (`theatre.jwt`) issued by registration, login, or refresh — the API
 keeps no server-side session state.
 
-Movie list and detail responses include two community rating fields:
-`averageRating` — the mean of all users' ratings for the movie, rounded
-to one decimal (e.g. `8.7`), or `null` when nobody has rated it yet — and
-`ratingCount`, the number of ratings behind that average. Averages are
-computed on read from the ratings table, so they are always current and
-never stored.
+Movie list and detail responses include community rating fields (`averageRating`, `ratingCount`) and the authenticated user's rating (`userRating`). `averageRating` is the mean of all users' ratings for the movie, rounded to one decimal (e.g. `8.7`), or `null` when nobody has rated it yet; `ratingCount` is the number of ratings behind that average; `userRating` is the current user's rating for the movie (integer 1-10) or `null`. Averages are computed on read from the ratings table, so they are always current and never stored.
 
 `GET /api/movies` is paginated: `?page` (default 1) and `?limit`
 (default 20, capped at 100) are validated with Zod, and the response is
@@ -159,7 +154,7 @@ primary keys, and timestamps maintained by the database.
 Movie ratings live in their own table keyed by `(user_id, movie_id)` —
 one rating per user and movie, enforced by a composite primary key that
 also backs the re-rating upsert. Ratings are integers constrained to
-`0-10` by both a Zod schema and a database CHECK. The `GET /api/ratings`
+`1-10` by both a Zod schema and a database CHECK. The `GET /api/ratings`
 endpoint returns all ratings for the authenticated user, ordered by
 `movieId` for efficient client-side injection into movie tables. The
 community averages in the movie list and detail responses are computed
