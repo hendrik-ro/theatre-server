@@ -1,3 +1,21 @@
+# [3.0.0](https://github.com/hendrik-ro/theatre-server/compare/v2.0.4...v3.0.0) (2026-10-27)
+
+
+### Bug Fixes
+
+* **movies:** added search filter condition on db query ([8b11e44](https://github.com/hendrik-ro/theatre-server/commit/8b11e449a75d9bcb93d433f66bba22f64965ffed))
+
+
+### Features
+
+* dropped imdb, rating starts at 1, controller defines sort ([c116d61](https://github.com/hendrik-ro/theatre-server/commit/c116d6104eb595572a91dd35ac2565eb0e45f6c5))
+* **movies:** server-side search & sorting ([70840e4](https://github.com/hendrik-ro/theatre-server/commit/70840e40ee892d5d9547b144330cc38605bbc489))
+
+
+### BREAKING CHANGES
+
+* altered schemas
+
 ## [2.0.4](https://github.com/hendrik-ro/theatre-server/compare/v2.0.3...v2.0.4) (2026-10-26)
 
 ### Bug Fixes
